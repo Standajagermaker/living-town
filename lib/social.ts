@@ -81,17 +81,18 @@ export function holiday(s:TownState):TownState{
 }
 export function restaurantMeal(s:TownState):TownState{
  if(s.place!=='restaurant'||s.wallet<18)return s;const n=addTime(s,45);
- return {...n,wallet:s.wallet-18,walletHistory:[...s.walletHistory,s.wallet-18],life:{...n.life,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)}};
+ return {...n,wallet:s.wallet-18,walletHistory:[...s.walletHistory,s.wallet-18],life:{...n.life,lastMeal:n.day*1440+n.minute,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)}};
 }
 
-export function sport(s:TownState,kind:'bike'|'swim'|'ski'):TownState{
+export function sport(s:TownState,kind:'bike'|'swim'|'ski'|'downhill'):TownState{
  const social=s.social??defaultSocial(),season=seasonFor(s.day);
  if(s.life.energy<25)return s;
  if(kind==='bike'&&(s.place!=='park'||!social.wardrobe.includes('bike')))return s;
- if(kind==='swim'&&(s.place!=='park'||season!==1||!social.wardrobe.includes('swimsuit')))return s;
- if(kind==='ski'&&(s.place!=='mountains'||season!==3||!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')))return s;
+ if(kind==='swim'&&(s.place!=='pool'||season!==1||!social.wardrobe.includes('swimsuit')))return s;
+ if(kind==='ski'&&(s.place!=='resort'||season!==3||!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')))return s;
+ if(kind==='downhill'&&(s.place!=='resort'||(season!==1&&season!==2)||!social.wardrobe.includes('bike')))return s;
  const n=addTime(s,90);
  return {...n,life:{...n.life,energy:Math.max(0,n.life.energy-12),hunger:Math.min(100,n.life.hunger+13)},
- journal:{cs:[...s.journal.cs,kind==='bike'?'Projížďka na kole: cizí pes tě předběhl s výrazem profesionálního závodníka.':kind==='swim'?'Koupání v létě: jeden plavec si zapomněl, že má na sobě sluneční brýle.':'Lyžování: stopa vedla přímo ke stánku s čajem. Podezřele praktické.'],
- de:[...s.journal.de,kind==='bike'?'Radtour: Ein fremder Hund überholt dich mit der Miene eines Profis.':kind==='swim'?'Sommerschwimmen: Ein Schwimmer vergisst, dass er noch seine Sonnenbrille trägt.':'Skifahren: Die Spur endet direkt am Teestand. Verdächtig praktisch.']}};
+ journal:{cs:[...s.journal.cs,kind==='bike'?'Projížďka na kole: cizí pes tě předběhl s výrazem profesionálního závodníka.':kind==='swim'?'Koupání v létě: jeden plavec si zapomněl, že má na sobě sluneční brýle.':kind==='ski'?'Lyžování: stopa vedla přímo ke stánku s čajem. Podezřele praktické.':'Downhill: na sjezdovce tě předjel důchodce s klidným výrazem a zvonkem na řídítkách.'],
+ de:[...s.journal.de,kind==='bike'?'Radtour: Ein fremder Hund überholt dich mit der Miene eines Profis.':kind==='swim'?'Sommerschwimmen: Ein Schwimmer vergisst, dass er noch seine Sonnenbrille trägt.':kind==='ski'?'Skifahren: Die Spur endet direkt am Teestand. Verdächtig praktisch.':'Downhill: Ein Rentner überholt dich seelenruhig mit Klingel am Lenker.']}};
 }

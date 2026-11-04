@@ -1,4 +1,4 @@
-# Little Elsewhere — v0.7.0
+# Living Town — v0.8.0
 
 Dvoujazyčné živé městečko (CZ/DE), Next.js.
 

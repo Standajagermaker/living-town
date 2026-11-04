@@ -1,6 +1,8 @@
 'use client';
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
+import {byId} from '../lib/residents';
+import {supermarketEncounter,respondToSupermarket} from '../lib/marketEncounter';
 import {eat,groceries,groceryOffers,watchTv,browseHome,rest,borrow,readLoan,returnLoan,lookAround,catalog,eventsForDay,registerEvent,attendEvent,type TownEvent} from '../lib/life';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void;onAttend?:(s:TownState)=>void;onFocus?:(focus:'room'|'tv'|'phone')=>void};
 const l={
@@ -11,6 +13,8 @@ export function DailyLife({state,lang,onState,onFocus}:Props){
  const t=l[lang],life=state.life;
  const [openBook,setOpenBook]=useState<string|null>(null);
  const book=catalog.find(b=>b.id===openBook);
+ const encounter=supermarketEncounter(state);
+ const encounterName=encounter?byId(encounter.residentId)?.name:undefined;
  return <div className="daily-life">
   {state.place==='home'&&<><div className="home-furniture">
    <section><h4>🧊 {t.fridge}</h4><p>{t.groceries}: {life.groceries}</p><button disabled={life.groceries<1} onClick={()=>onState(eat(state))}>🍳 {t.meal}</button>{life.groceries===0&&<small>{t.empty}</small>}</section>
@@ -20,7 +24,17 @@ export function DailyLife({state,lang,onState,onFocus}:Props){
    </div>
    {book&&<div className="reading-card"><h4>{book[lang]}</h4><p>{lang==='cs'?book.csText:book.deText}</p><button onClick={()=>{onState(readLoan(state,book.id));setOpenBook(null)}}>{t.finished}</button><button onClick={()=>setOpenBook(null)}>{t.close}</button></div>}
    </>}
-  {state.place==='market'&&<div className="life-object"><h4>🛒 {t.shop}</h4><p>{lang==='cs'?'Dnešní nabídka – ceny se mění':'Heutige Angebote – wechselnde Preise'}</p>{groceryOffers(state.day).map(item=><div className="shop-item" key={item.id}><span>{item[lang]} · {item.portions} {lang==='cs'?'porce':'Portionen'} · {item.price.toFixed(2)} €</span><button disabled={state.wallet<item.price} onClick={()=>onState(groceries(state,item.id))}>{lang==='cs'?'Koupit':'Kaufen'}</button></div>)}</div>}
+  {state.place==='market'&&<div className="life-object"><h4>🛒 {t.shop}</h4>
+ {encounter&&<div className="market-encounter">
+  <strong>💬 {encounterName??(lang==='cs'?'Známá tvář':'Ein bekanntes Gesicht')}</strong>
+  <p>{encounter[lang]}</p>
+  <div className="market-encounter-actions">
+    <button onClick={()=>onState(respondToSupermarket(state,'help'))}>{lang==='cs'?(encounter.kind==='dropped'?'Pomůžu ti.':'Jasně, mám chvíli.'):encounter.kind==='dropped'?'Ich helfe dir.':'Ja, ich habe kurz Zeit.'}</button>
+    <button onClick={()=>onState(respondToSupermarket(state,'talk'))}>{lang==='cs'?'Co je u tebe nového?':'Was gibt es Neues bei dir?'}</button>
+    <button onClick={()=>onState(respondToSupermarket(state,'decline'))}>{lang==='cs'?'Promiň, dnes spěchám.':'Tut mir leid, ich habe es eilig.'}</button>
+  </div>
+ </div>}
+ {state.marketLastResponse&&state.marketLastResponseVisit===state.marketVisits&&<div className="market-followup"><p>{state.marketLastResponse[lang]}</p></div>}<p>{lang==='cs'?'Dnešní nabídka – ceny se mění':'Heutige Angebote – wechselnde Preise'}</p>{groceryOffers(state.day).map(item=><div className="shop-item" key={item.id}><span>{item[lang]} · {item.portions} {lang==='cs'?'porce':'Portionen'} · {item.price.toFixed(2)} €</span><button disabled={state.wallet<item.price} onClick={()=>onState(groceries(state,item.id))}>{lang==='cs'?'Koupit':'Kaufen'}</button></div>)}</div>}
   {state.place==='library'&&<div className="life-object"><h4>📚 {t.library}</h4>{catalog.map(b=>{const loan=life.loans.find(x=>x.id===b.id);return <div className="book-row" key={b.id}><span>{b[lang]}</span>{loan?<button onClick={()=>onState(returnLoan(state,b.id))}>{t.return}</button>:<button disabled={life.readBooks.includes(b.id)} onClick={()=>onState(borrow(state,b.id))}>{t.borrow}</button>}</div>})}</div>}
   {(state.place==='street'||state.place==='square')&&<button className="action-row" onClick={()=>onState(lookAround(state))}>👁 {t.look}</button>}
  </div>;

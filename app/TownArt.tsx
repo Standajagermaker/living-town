@@ -1,7 +1,8 @@
 'use client';
+import {useState,useEffect} from 'react';
 import type {Place,Lang} from '../lib/world';
 import {placeNames} from '../lib/world';
-export const glyph:Record<Place,string>={home:'⌂',street:'🚶',bakery:'☕',square:'♜',work:'▣',library:'▤',market:'🛒',cafe:'☕',park:'🌳',church:'⛪',hotel:'🛏',gym:'🏋',mountains:'⛰',restaurant:'🍽',outfitter:'🧥',pool:'🏊',resort:'🎿'};
+export const glyph:Record<Place,string>={bank:'🏦',home:'⌂',street:'🚶',bakery:'☕',square:'♜',work:'▣',library:'▤',market:'🛒',cafe:'☕',park:'🌳',church:'⛪',hotel:'🛏',gym:'🏋',mountains:'⛰',restaurant:'🍽',outfitter:'🧥',pool:'🏊',resort:'🎿'};
 export function ArtTown({season}:{season:number}){
  return <svg className={'town-art season-'+season} viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
  <defs><linearGradient id="sky-art" x2="0" y2="1"><stop stopColor="#e2cba9"/><stop offset=".72" stopColor="#b5d1c8"/><stop offset="1" stopColor="#839c88"/></linearGradient><linearGradient id="river-art" x2="0" y2="1"><stop stopColor="#b4ddcb"/><stop offset="1" stopColor="#3b7c91"/></linearGradient></defs>
@@ -22,7 +23,15 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
  {place:'mountains',x:72,y:18},{place:'restaurant',x:43,y:49},{place:'outfitter',x:24,y:59},
  {place:'pool',x:19,y:33},{place:'resort',x:86,y:13}
 ];
-export function StreetView({place,lang,season}:{place:Place;lang:Lang;season:number}){
+export function StreetView({place,lang,season,hour=12}:{place:Place;lang:Lang;season:number;hour?:number}){
+ const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work'};
+ const asset=named[place]??null;
+ const [format,setFormat]=useState<'webp'|'svg'>('webp');
+ useEffect(()=>setFormat('webp'),[place]);
+ if(asset)return <div className={'player-photo-scene season-'+season+' '+(hour>=20||hour<6?'is-night':'')} role="img" aria-label={placeNames[place][lang]}>
+   <img src={`/scenes/${asset}.${format}`} alt={placeNames[place][lang]} onError={()=>{if(format==='webp')setFormat('svg')}}/>
+   <div className="perspective-label">{glyph[place]} {placeNames[place][lang]}</div>
+ </div>;
  const indoor=(['home','bakery','library','market','restaurant','cafe','hotel','work','gym','outfitter'] as Place[]).includes(place);
  const hills=place==='mountains'||place==='resort';
  const pool=place==='pool';

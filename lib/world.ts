@@ -1,5 +1,6 @@
 import {byId,isPresent,moodOf,placeFor,residents,residentsAt,type Resident} from './residents';
 import type {Place,Lang} from './game';
+import {initialLife,addTime,type LifeState} from './life';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom';
 export type Turn={role:'player'|'npc';cs:string;de:string;raw?:string};
@@ -16,18 +17,20 @@ export const quizzes:Quiz[]=[
 ];
 export const placeNames:Record<Place,Record<Lang,string>>={
  home:{cs:'Domov',de:'Zuhause'},street:{cs:'Ulice',de:'Straße'},bakery:{cs:'Pekárna',de:'Bäckerei'},
- square:{cs:'Náměstí',de:'Marktplatz'},work:{cs:'Práce',de:'Arbeitsplatz'},library:{cs:'Knihovna',de:'Bibliothek'}
+ square:{cs:'Náměstí',de:'Marktplatz'},work:{cs:'Práce',de:'Arbeitsplatz'},library:{cs:'Knihovna',de:'Bibliothek'},
+ market:{cs:'Supermarket',de:'Supermarkt'},cafe:{cs:'Kavárna',de:'Café'},park:{cs:'Park',de:'Park'},
+ church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'}
 };
-export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library'],bakery:['street'],square:['street','library'],work:['street'],library:['street','square']};
+export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square'],church:['street','square'],hotel:['street','square'],gym:['street','square']};
 export type TownState={
- version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;
+ version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
  completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
- version:5,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,
+ version:6,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,life:initialLife(),
  discovered:['home','street','bakery','work'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85]
@@ -36,8 +39,8 @@ export function restoreTown(raw:unknown):TownState{
  const freshState=initialTown();
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
- if(v.version!==5)return freshState;
- return {...freshState,...v,conversations:v.conversations??{},journal:v.journal??freshState.journal};
+ if(v.version!==5&&v.version!==6)return freshState;
+ return {...freshState,...v,version:6,life:{...initialLife(),...(v.life??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
@@ -45,7 +48,7 @@ export const occupant=(s:TownState)=>residentsAt(s.place,s.day,s.minute);
 export const canGo=(s:TownState,to:Place)=>s.place===to||links[s.place].includes(to)&&s.discovered.includes(to);
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
- return {...s,place:to,minute:s.minute+6,selectedNpc:null};
+ const next=addTime(s,6);return {...next,place:to,selectedNpc:null};
 }
 const pair=(cs:string,de:string)=>({cs,de});
 export function note(s:TownState,cs:string,de:string):TownState{return {...s,journal:{cs:[...s.journal.cs,cs],de:[...s.journal.de,de]}};}

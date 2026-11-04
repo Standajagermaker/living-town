@@ -38,7 +38,7 @@ export default function Page(){
  useEffect(()=>{if(ready){localStorage.setItem(SAVE,JSON.stringify(game));localStorage.setItem('living-town-lang',lang);}},[game,lang,ready]);
  const tx=i18n[lang]; const npc=npcAt(game.place);const mem=npc?game.conversations[npc]:null;
  const routesList=(['home','street','bakery','square','work','library'] as Place[]).filter(p=>p!==game.place&&canTravel(game,p));
- const missions:{id:Goal;text:string}[]=[{id:'neighbor',text:tx.goal_neighbor},{id:'recommend',text:tx.goal_recommend},{id:'purchase',text:tx.goal_purchase},{id:'work',text:tx.goal_work},{id:'read',text:tx.goal_read},{id:'research',text:tx.goal_research}];
+ const missions:{id:Goal;text:string}[]=[{id:'neighbor',text:tx.goal_neighbor},{id:'work',text:tx.goal_work},...(game.knownNames.length>0||game.completedGoals.includes('recommend')?[{id:'recommend' as Goal,text:tx.goal_recommend}]:[]),...(game.discovered.includes('bakery')?[{id:'purchase' as Goal,text:tx.goal_purchase}]:[]),...(game.discovered.includes('library')?[{id:'read' as Goal,text:tx.goal_read},{id:'research' as Goal,text:tx.goal_research}]:[])];
  function navigate(p:Place){setGame(s=>gameMove(s,p,lang));setDraft('');setReading(null);setTab('world');}
  function approach(){if(!npc)return;setGame(s=>begin(s,lang));setTab('dialogue');}
  function respond(text:string,id?:string){if(!text.trim()||!npc)return;const selected=id?options(game,lang).find(o=>o.id===id):undefined;setGame(s=>interact(s,text,lang,selected));setDraft('');setTab('dialogue');}

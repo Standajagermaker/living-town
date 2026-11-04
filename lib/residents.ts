@@ -1,4 +1,5 @@
 import type {Place} from './game';
+import {weatherAt} from './weather';
 export type ResidentMood='calm'|'cheerful'|'stressed'|'tired'|'irritable'|'curious';
 export type Resident={id:string;name:string;age:number;temperament:'warm'|'reserved'|'eccentric'|'skeptical'|'bold'|'shy';trait:number;humor:number;empathy:number;job:Place|null;sideJob:Place|null;homeDistrict:number;vacationStart:number;vacationLength:number;weekendWorker:boolean;officeRole?:'boss'|'overtime'|'remote'|'staff';interests:string[];portrait:string};
 const first=['Anton','Mira','Nora','Felix','Hanna','Leon','Klara','Emil','Greta','Theo','Lina','Oskar','Maja','Jonas','Romy','Bruno','Elisa','Tobias','Ida','Karl','Silvia','Juno','Matteo','Vera','Anika','Paul','Amira','Gregor','Sina','Rafael','Nina','Max','Elena','Moritz','Yara','Benedikt','Frida','David','Lotte','Samir','Kira','Arno','Cleo','Tim','Marlene','Milan','Rosa','Hugo','Tara','Vincent'];
@@ -92,13 +93,22 @@ export function placeFor(r:Resident,day:number,minute:number):Place{
  if(hour>=10&&hour<16&&dow<2)return (['square','street','bakery','library'] as Place[])[(r.age+day)%4];
  return r.homeDistrict%2===0?'street':'square';
 }
+const outdoorPlaces:Place[]=['street','square','park','mountains'];
+const originalPlaceFor=placeFor;
+export function weatherPlaceFor(r:Resident,day:number,minute:number):Place{
+ const place=originalPlaceFor(r,day,minute),weather=weatherAt(day).kind;
+ if((weather!=='rain'&&weather!=='storm')||!outdoorPlaces.includes(place))return place;
+ if((Number(r.id.slice(-2))*13+day*7+Math.floor(minute/60))%9===0)return place;
+ const indoor:Place[]=['cafe','library','market','home'];
+ return indoor[(r.trait+day)%indoor.length];
+}
 export function residentsAt(place:Place,day:number,minute:number):Resident[]{
  // Home belongs to the player, other residents cannot be approached there.
  if(place==='home')return [];
- const found=residents.filter(r=>placeFor(r,day,minute)===place).sort((a,b)=>a.id.localeCompare(b.id));
+ const found=residents.filter(r=>weatherPlaceFor(r,day,minute)===place).sort((a,b)=>a.id.localeCompare(b.id));
  // A quiet library normally contains a librarian and at most two visitors.
- return place==='library'?found.slice(0,3):found.slice(0,place==='park'?6:7);
+ return outdoorPlaces.includes(place)&&['rain','storm'].includes(weatherAt(day).kind)?found.slice(0,1):place==='library'?found.slice(0,3):found.slice(0,place==='park'?6:7);
 }
 export function isPresent(id:string,place:Place,day:number,minute:number){
- const r=byId(id);return !!r&&placeFor(r,day,minute)===place;
+ return residentsAt(place,day,minute).some(r=>r.id===id);
 }

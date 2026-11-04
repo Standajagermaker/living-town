@@ -1,6 +1,6 @@
 import {byId,isPresent,moodOf,placeFor,residents,residentsAt,type Resident} from './residents';
 import type {Place,Lang} from './game';
-import {initialLife,addTime,type LifeState} from './life';
+import {initialLife,addTime,eventsForDay,type LifeState} from './life';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom';
 export type Turn={role:'player'|'npc';cs:string;de:string;raw?:string};
@@ -44,7 +44,12 @@ export function restoreTown(raw:unknown):TownState{
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
-export const occupant=(s:TownState)=>residentsAt(s.place,s.day,s.minute);
+export const occupant=(s:TownState)=>{
+ const regular=residentsAt(s.place,s.day,s.minute);
+ const event=eventsForDay(s.day).find(e=>e.place===s.place&&s.life.visited.includes(e.id));
+ const attendees=event?event.attendees.map(byId).filter((r):r is Resident=>!!r):[];
+ return [...new Map([...regular,...attendees].map(r=>[r.id,r])).values()];
+};
 export const canGo=(s:TownState,to:Place)=>s.place===to||links[s.place].includes(to)&&s.discovered.includes(to);
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
@@ -53,7 +58,7 @@ export function go(s:TownState,to:Place):TownState{
 const pair=(cs:string,de:string)=>({cs,de});
 export function note(s:TownState,cs:string,de:string):TownState{return {...s,journal:{cs:[...s.journal.cs,cs],de:[...s.journal.de,de]}};}
 export function startConversation(s:TownState,id:string):TownState{
- if(!isPresent(id,s.place,s.day,s.minute))return s;
+ if(!occupant(s).some(r=>r.id===id))return s;
  const r=byId(id)!; const prior=s.conversations[id]??fresh();if(prior.open)return {...s,selectedNpc:id};
  const greetings=prior.visits>0?pair('Zase se vidíme. Co je u tebe nového?','Wir sehen uns wieder! Was gibt es Neues bei Ihnen?'):
  pair('Ahoj, potřebuješ něco?','Hallo, kann ich Ihnen helfen?');
@@ -78,9 +83,19 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  {id:'hobby',topic:'hobby',cs:'Co tě baví ve volném čase?',de:'Was machen Sie gerne in der Freizeit?'},
  {id:'event',topic:'event',cs:'Neděje se dnes něco zajímavého?',de:'Ist heute etwas Interessantes los?'}
  ];
- const context=m.topic?[
- {id:'follow-'+m.turns,topic:'followup' as Topic,cs:'A jak to pokračovalo?',de:'Und wie ging es weiter?'},
- {id:'opinion-'+m.turns,topic:'followup' as Topic,cs:'Jaký z toho máš pocit?',de:'Wie fühlen Sie sich dabei?'}]:[];
+ const follow:Record<Topic,[string,string,string,string]>={
+ name:['Těší mě. Jak dlouho tu bydlíš?','Freut mich! Wie lange wohnen Sie schon hier?','A znáš tu hodně lidí?','Kennen Sie hier viele Leute?'],
+ advice:['A kudy se tam dostanu?','Und wie komme ich dorthin?','Co se ti tam nejvíc líbí?','Was gefällt Ihnen dort am besten?'],
+ event:['Kdy se to koná?','Wann findet das statt?','Půjdeš tam taky?','Werden Sie auch dort sein?'],
+ job:['A co tě na práci baví?','Was gefällt Ihnen an der Arbeit?','Nemáš toho dnes hodně?','Ist heute viel zu tun?'],
+ hobby:['Jak ses k tomu dostal?','Wie bist du dazu gekommen?','Doporučil bys mi to zkusit?','Würdest du mir das empfehlen?'],
+ about:['Jak dlouho to tak máš?','Wie lange ist das schon so?','A co plánuješ dál?','Was planen Sie als Nächstes?'],
+ followup:['To dává smysl. A co potom?','Das klingt nachvollziehbar. Und danach?','Jak to celé dopadlo?','Wie ging es dann aus?'],
+ hello:['Jaký máš dnes den?','Wie läuft Ihr Tag?','Máš chvilku?','Haben Sie einen Moment?'],
+ thanks:['Uvidíme se zase?','Sehen wir uns wieder?','Měj se hezky.','Machen Sie es gut.'],
+ bye:['Měj se.','Machen Sie es gut.','Díky.','Danke.'],custom:['To je zajímavé. A dál?','Interessant. Und weiter?','Co si o tom myslíš ty?','Was denken Sie darüber?']};
+ const f=m.topic?follow[m.topic]:null;
+ const context=f?[{id:'follow-'+m.turns,topic:'followup' as Topic,cs:f[0],de:f[1]},{id:'opinion-'+m.turns,topic:'followup' as Topic,cs:f[2],de:f[3]}]:[];
  const unused=all.filter(c=>!m.asked.includes(c.id));
  const current=[...context,...unused].slice(0,4);
  if(!current.length)current.push({id:'more-'+m.turns,topic:'followup',cs:'Co je u tebe nového?',de:'Was gibt es Neues bei Ihnen?'});
@@ -100,7 +115,7 @@ function infer(s:string):Topic{
  return 'custom';
 }
 export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generated?:{cs:string;de:string}):TownState{
- const id=s.selectedNpc;if(!id||!isPresent(id,s.place,s.day,s.minute))return {...s,selectedNpc:null};
+ const id=s.selectedNpc;if(!id||!occupant(s).some(r=>r.id===id))return {...s,selectedNpc:null};
  const r=byId(id)!;const m=s.conversations[id]??fresh();if(!m.open)return s;
  const topic=choice?.topic??infer(input);
  if(topic==='bye')return exitConversation(s);
@@ -129,11 +144,20 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  pair('Možná na tom něco je. Povíš mi o tom víc?','Da könnte etwas dran sein. Erzählen Sie mehr.')
  ];
  const key=topic==='custom'?variants[stableHash(input+r.id+m.turns)%variants.length]:responses[topic];
- const contextual=generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key;
+ const boss=id==='npc-02'&&s.place==='work'&&topic==='advice';
+ const bossIrritable=(s.day*11+s.minute*3)%5<3;
+ const bossText=pair(bossIrritable?'Šéf: „Doporučil bych ti hlavně tvoje pracovní místo. Teď do práce.“':'Šéf: „Kavárna na náměstí je dobrá. Ale až po práci. A mimochodem, dnes odvádíš dobrou práci.“',bossIrritable?'Chef: „Ich empfehle dir vor allem deinen Arbeitsplatz. An die Arbeit!“':'Chef: „Das Café am Marktplatz ist gut. Aber erst nach Feierabend. Übrigens, gute Arbeit heute.“');
+ const contextual=boss?bossText:generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key;
  const newText=repeated?contextual:mood==='tired'?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);
  let next:TownState={...s,minute:s.minute+2,conversations:{...s.conversations,[id]:{...m,asked:[...seen],topic,repeat:repeated,turns:[...m.turns,{role:'player',cs:input,de:input,raw:input},npcTurn]}}};
+ if(boss){
+   const warnings=s.life.workWarnings+(bossIrritable?1:0);
+   const bonus=bossIrritable?0:10;
+   next={...next,wallet:next.wallet+bonus,employment:warnings>=4?'fired':next.employment,
+     life:{...next.life,workWarnings:warnings},walletHistory:bonus?[...next.walletHistory,next.wallet+bonus]:next.walletHistory};
+ }
  if(topic==='name'&&!next.known.includes(id)){next={...next,known:[...next.known,id],completed:[...new Set([...next.completed,'meet'])]};}
  if(topic==='advice'){
   const discovered=[...new Set([...next.discovered,'square','library'] as Place[])];
@@ -144,11 +168,13 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
 }
 export function doShift(s:TownState):TownState{
  if(s.place!=='work'||s.employment==='fired'||s.day%7<2||s.lastShift===s.day)return s;
- return {...s,wallet:s.wallet+45,minute:s.minute+8*60,lastShift:s.day,completed:[...new Set([...s.completed,'work'])],walletHistory:[...s.walletHistory,s.wallet+45]};
+ if(s.life.energy<28||s.life.hunger>82)return s;
+ const n=addTime(s,8*60);
+ return {...n,wallet:s.wallet+45,lastShift:s.day,completed:[...new Set([...s.completed,'work'])],walletHistory:[...s.walletHistory,s.wallet+45]};
 }
 export function buy(s:TownState):TownState{
  if(s.place!=='bakery'||s.wallet<2.5)return s;
- return {...s,wallet:s.wallet-2.5,completed:[...new Set([...s.completed,'buy'])],walletHistory:[...s.walletHistory,s.wallet-2.5]};
+ const n=addTime(s,10);return {...n,wallet:s.wallet-2.5,life:{...n.life,hunger:Math.max(0,n.life.hunger-22)},completed:[...new Set([...s.completed,'buy'])],walletHistory:[...s.walletHistory,s.wallet-2.5]};
 }
 export function read(s:TownState,kind:'book'|'web'):TownState{
  if(s.place!=='library'||(kind==='book'?s.lastRead:s.lastResearch)===s.day)return s;

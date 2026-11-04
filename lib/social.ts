@@ -18,8 +18,30 @@ export const gearItems=[
  {id:'bike',price:300,cs:'Kolo',de:'Fahrrad'},
  {id:'skis',price:420,cs:'Lyže',de:'Ski'},
  {id:'hiking',price:70,cs:'Turistické boty',de:'Wanderschuhe'},
- {id:'running-shoes',price:58,cs:'Běžecké boty',de:'Laufschuhe'}
+ {id:'running-shoes',price:58,cs:'Běžecké boty',de:'Laufschuhe'},
+ {id:'sportswear',price:39,cs:'Sportovní oblečení do posilovny',de:'Sportkleidung fürs Fitnessstudio'},
+ {id:'smart-outfit',price:89,cs:'Společenské oblečení',de:'Schicke Kleidung für Theater und Kirche'}
 ];
+// Outfit checks are enforced on location entry and again when starting an activity.
+export function requiredOutfit(place:Place,day:number):string[]{
+ if(place==='gym')return ['sportswear','running-shoes'];
+ if(place==='theatre'||place==='church')return ['smart-outfit'];
+ if(place==='mountains'){
+  const season=seasonFor(day);
+  return ['hiking',...(season===0?['raincoat']:season===2?['jacket']:season===3?['wintercoat']:[])];
+ }
+ return [];
+}
+export function missingOutfit(place:Place,day:number,wardrobe:string[]):string[]{
+ return requiredOutfit(place,day).filter(id=>!wardrobe.includes(id));
+}
+export function outfitMessage(place:Place,day:number,wardrobe:string[],lang:Lang):string|null{
+ const missing=missingOutfit(place,day,wardrobe);
+ if(!missing.length)return null;
+ const labels=missing.map(id=>gearItems.find(x=>x.id===id)?.[lang]??id);
+ return lang==='cs'?'Nejdřív potřebuješ: '+labels.join(', ')+'. Najdeš je v obchodě s oblečením a vybavením.':
+ 'Du brauchst zuerst: '+labels.join(', ')+'. Das gibt es im Sport- und Bekleidungsgeschäft.';
+}
 const bond0=():Bond=>({warmth:0,trust:0,lastContact:-1,invited:false,requested:false,cooldownUntil:-1});
 export const getBond=(s:TownState,id:string)=>s.social?.bonds[id]??bond0();
 export function developBond(s:TownState,id:string,kind:'kind'|'rude'|'time'|'flirt'):TownState{
@@ -72,7 +94,7 @@ export function buyGear(s:TownState,id:string):TownState{
  return {...s,wallet:s.wallet-item.price,walletHistory:[...s.walletHistory,s.wallet-item.price],social:{...social,wardrobe:[...social.wardrobe,id]}};
 }
 export function dayTrip(s:TownState):TownState{
- const social=s.social??defaultSocial();if(s.place!=='mountains'||s.life.energy<30||!social.wardrobe.includes('hiking')||!social.wardrobe.includes(gearFor(s.day)))return s;
+ const social=s.social??defaultSocial();if(s.place!=='mountains'||s.life.energy<30||missingOutfit('mountains',s.day,social.wardrobe).length>0)return s;
  const n=addTime(s,180);
  return {...n,life:{...n.life,energy:Math.max(0,n.life.energy-25),hunger:Math.min(100,n.life.hunger+15)},social:{...social,tripCount:social.tripCount+1},journal:{cs:[...s.journal.cs,'Výlet v horách: turistka se ztratila i s papírovou mapou a nakonec se zeptala ovce na cestu.'],de:[...s.journal.de,'Ausflug in die Berge: Eine Wanderin verläuft sich trotz Papierkarte und fragt schließlich ein Schaf nach dem Weg.']}};
 }

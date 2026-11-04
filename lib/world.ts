@@ -7,7 +7,7 @@ import {isVenueOpen} from './seasonal';
 import {restaurantCast,initialRestaurantStory,type RestaurantStory,foodTrouble} from './restaurantStory';
 import {nextUnusedFact} from './facts';
 import {weatherAt} from './weather';
-import {type Pet,petAtNewDay} from './pets';
+import {type Pet} from './pets';
 import {supermarketEncounter} from './marketEncounter';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom'|'contact'|'flirt'|'invite';

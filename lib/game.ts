@@ -172,12 +172,12 @@ export function study(s:GameState,kind:'read'|'research',lang:Lang):GameState{
  reads:s.reads+(kind==='read'?1:0),researches:s.researches+(kind==='research'?1:0),lastStudyDay:{...s.lastStudyDay,[kind]:s.day},completedGoals:[...g],journal};
 }
 export function workShift(s:GameState):GameState{
- if(s.place!=='work'||s.employment==='fired'||s.day<2||s.day>6||s.dayLastWorked===s.day)return s;
+ if(s.place!=='work'||s.employment==='fired'||s.day%7<2||s.dayLastWorked===s.day)return s;
  const goals=new Set(s.completedGoals);goals.add('work');
  return {...s,wallet:s.wallet+45,minute:s.minute+8*60,dayLastWorked:s.day,shiftsWorked:s.shiftsWorked+1,completedGoals:[...goals],journal:{cs:[...s.journal.cs,'Odpracovaná směna, výdělek 45 €.'],de:[...s.journal.de,'Schicht gearbeitet, 45 € verdient.']}};
 }
 export function nextDay(s:GameState):GameState{
- const missed=s.day>=2&&s.day<=6&&s.dayLastWorked!==s.day&&s.employment!=='fired'?s.shiftsMissed+1:s.shiftsMissed;
+ const missed=s.day%7>=2&&s.dayLastWorked!==s.day&&s.employment!=='fired'?s.shiftsMissed+1:s.shiftsMissed;
  const employment:GameState['employment']=missed>=3?'fired':missed>=2?'warning':s.employment;
  const journal={cs:[...s.journal.cs],de:[...s.journal.de]};
  if(employment!==s.employment){journal.cs.push(say('cs',employment==='fired'?'fired':'workWarning'));journal.de.push(say('de',employment==='fired'?'fired':'workWarning'));}

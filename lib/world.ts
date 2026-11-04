@@ -1,4 +1,4 @@
-import {byId,isPresent,moodOf,placeFor,residents,residentsAt,type Resident} from './residents';
+import {byId,isPresent,moodOf,placeFor,residents,residentsAt,currentAppointment,interestCatalog,type Resident} from './residents';
 import type {Place,Lang} from './game';
 import {initialLife,addTime,eventsForDay,type LifeState} from './life';
 import {defaultSocial,developBond,applyNewDay,type SocialState} from './social';
@@ -76,8 +76,15 @@ export function startConversation(s:TownState,id:string):TownState{
  pair('Ahoj, ty jsi tu nový?','Hallo, sind Sie neu hier?');
  const mood=moodOf(r,s.day,s.minute);
  const prompt=mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings;
- const n={...s,selectedNpc:id,conversations:{...s.conversations,[id]:{...prior,open:true,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...prompt}]}}};
- return developBond(n,id,'time');
+ const bond=s.social?.bonds[id];
+ const away=!!currentAppointment(r,s.day,s.minute);
+ const reluctant=(mood==='irritable'||mood==='stressed'||mood==='tired')&&(r.trait+s.day*7)%5<=2;
+ const refuses=(bond?.warmth??0)<-12||(reluctant&&prior.visits===0);
+ const line=refuses
+  ?pair(away?'Promiň, teď mám svoje plány. Rád si je nechám pro sebe. Měj se!':'Omlouvám se, dnes nemám chuť si povídat. Měj se!','Tut mir leid, ich habe gerade eigene Pläne und möchte sie für mich behalten. Bis dann!')
+  :prompt;
+ const n={...s,selectedNpc:refuses?null:id,conversations:{...s.conversations,[id]:{...prior,open:!refuses,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...line}]}}};
+ return refuses?n:developBond(n,id,'time');
 }
 export function exitConversation(s:TownState):TownState{
  if(!s.selectedNpc)return s;
@@ -151,17 +158,28 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const repeated=repeat?m.repeat+1:0;
  const mood=moodOf(r,s.day,s.minute);
  const name= r.name.split(' ')[0];
+ const appointment=currentAppointment(r,s.day,s.minute);
+ const privateMood=mood==='irritable'||mood==='stressed'||mood==='tired';
+ const knowledge=s.social?.bonds[id];
+ const trusted=(knowledge?.trust??0)>=14;
+ const privacyDecline=privateMood&&(r.trait+s.day*3+m.turns.length)%4===0;
+ const hobbyReply=privacyDecline?pair('Promiň, to si dnes raději nechám pro sebe.','Das möchte ich heute lieber für mich behalten.'):
+ trusted?(()=>{
+   const descriptions=r.interests.map(k=>interestCatalog.find(x=>x.id===k)).filter(Boolean);
+   const chosen=descriptions[(r.age+s.day)%descriptions.length];
+   return pair('Když mám čas, baví mě '+(chosen?.cs.toLowerCase()??'procházky')+'. A ty?','Wenn ich Zeit habe, mag ich '+(chosen?.de??'Spaziergänge')+'. Und du?');
+ })():pair('Rád trávím čas venku. Co baví tebe?','Ich bin gern draußen. Und was machst du gern?');
  const responses:Record<Topic,{cs:string;de:string}>={
  contact:pair('Možná. Nejdřív se trochu poznejme.','Vielleicht. Lernen wir uns erst etwas besser kennen.'),
  flirt:pair('Děkuju. Uvidíme, jestli si budeme rozumět i příště.','Danke. Mal sehen, ob wir uns beim nächsten Mal auch so gut verstehen.'),
  invite:pair('Teď nevím. Dej mi prostor, rád se rozhodnu sám.','Ich weiß noch nicht. Gib mir bitte etwas Zeit, ich entscheide selbst.'),
  hello:pair('Vítej tady. Město je malé, ale občas překvapí víc než velkoměsto.','Willkommen! Die Stadt ist klein, überrascht aber manchmal mehr als eine Großstadt.'),
  name:pair('Jmenuji se '+r.name+'. A ty?','Ich heiße '+r.name+'. Und Sie?'),
- about:pair('V tomhle městě je pořád něco nového. Dnes mám ale vlastní plány.','In dieser Stadt ist immer etwas los. Heute habe ich allerdings eigene Pläne.'),
+ about:privacyDecline?pair('Nezlob se, o tom dnes nechci mluvit.','Entschuldige, darüber möchte ich heute nicht sprechen.'):pair('Zatím se tu mám docela dobře. Uvidíme, co přinese další týden.','Bisher gefällt es mir hier ganz gut. Mal sehen, was nächste Woche bringt.'),
  job:pair('Pracuji hlavně v '+placeNames[r.job??'square'].cs.toLowerCase()+(r.sideJob?' a občas mám druhou práci.':'.'),'Ich arbeite meistens bei '+placeNames[r.job??'square'].de+(r.sideJob?' und habe gelegentlich einen Nebenjob.':'.')),
  advice:pair('Zkus náměstí a knihovnu. Někdy tam narazíš na zajímavé lidi.','Schauen Sie sich den Marktplatz und die Bibliothek an. Dort trifft man interessante Leute.'),
- event:pair('Sleduj nástěnku na náměstí. Něco se tam občas pořádá.','Schauen Sie auf die Tafel am Marktplatz. Dort gibt es manchmal Veranstaltungen.'),
- hobby:pair(r.temperament==='eccentric'?'Sbírám staré klíče a hádám, od jakých byly dveří.':'Rád chodím na procházky a čtu si, když mám čas.',r.temperament==='eccentric'?'Ich sammle alte Schlüssel und rate, zu welchen Türen sie gehörten.':'Ich gehe gerne spazieren und lese, wenn ich Zeit habe.'),
+ event:pair('Něco se určitě děje. Mrkni do městského kalendáře.','Bestimmt ist etwas los. Schau im Stadtprogramm nach.'),
+ hobby:hobbyReply,
  followup:pair('To se teprve ukáže. Co bys dělal ty?','Das wird sich zeigen. Was würden Sie tun?'),
  thanks:pair('Není zač.','Gern geschehen.'),
  bye:pair('Měj se hezky!','Machen Sie es gut!'),
@@ -184,7 +202,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const interpersonal=topic==='contact'?contactOk?pair('Dobře, můžeme si někdy napsat. Jen nečekej odpověď okamžitě.','Gern, wir können uns schreiben. Aber erwarte bitte keine sofortige Antwort.'):pair('Díky za nabídku. Raději bychom se ještě poznali osobně.','Danke. Ich möchte dich lieber erst persönlich besser kennenlernen.'):
  topic==='invite'?inviteOk?pair('Káva na veřejném místě by mohla být fajn. Domů si ale hosty zatím nezvu.','Ein Kaffee an einem öffentlichen Ort wäre nett. Nach Hause lade ich aber noch niemanden ein.'):pair('Díky za pozvání. Momentálně se mi to nehodí.','Danke für die Einladung. Im Moment passt es mir nicht.'):
  topic==='flirt'?(mood==='irritable'||bond.trust<10?pair('To je milé, ale nechme tomu volný průběh.','Das ist nett, aber lassen wir es entspannt angehen.'):pair('Usmívám se. A teď mě zajímá, co ještě řekneš.','Ich muss lächeln. Jetzt bin ich gespannt, was du als Nächstes sagst.')):null;
- const contextual=interpersonal??(boss?bossText:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
+ const contextual=interpersonal??(boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
  const newText=repeated?contextual:mood==='tired'?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);

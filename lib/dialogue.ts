@@ -6,7 +6,7 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  const line=(last[lang]||last.cs||'').trim().toLowerCase();
  if(!/[?？][”"']?$/.test(line))return null;
  const options=(list:[string,string,string][])=>list.map(([id,cs,de])=>make(id+'-'+turn,cs,de));
- if(/to byl vtip|jak jsi to myslel|das war ein witz|wie meinst du das|co tím myslíš|was meinst du damit/.test(line))return options([
+ if(/to byl vtip|jak jsi to myslel|jak jsi to myslela|das war ein witz|wie meinst du das|co tím myslíš|was meinst du damit/.test(line))return options([
  ['misunderstand-explain','Promiň, byl to jen pokus o vtip.','Entschuldige, das war nur ein Scherz.'],
  ['misunderstand-clarify','Myslel jsem to jinak. Zkusím to vysvětlit jednodušeji.','Ich meinte es anders. Ich versuche es einfacher zu erklären.'],
  ['misunderstand-accept','Asi máme jiný smysl pro humor, a to je v pořádku.','Wir haben wohl einen anderen Humor, das ist völlig okay.']]);

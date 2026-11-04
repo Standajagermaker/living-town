@@ -1,7 +1,9 @@
-import {byId,isPresent,moodOf,placeFor,residents,residentsAt,type Resident} from './residents';
+import {byId,isPresent,moodOf,placeFor,residents,residentsAt,currentAppointment,interestCatalog,type Resident} from './residents';
 import type {Place,Lang} from './game';
 import {initialLife,addTime,eventsForDay,type LifeState} from './life';
 import {defaultSocial,developBond,applyNewDay,type SocialState} from './social';
+import {contextualOptions,contextualResponse} from './dialogue';
+import {isVenueOpen} from './seasonal';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom'|'contact'|'flirt'|'invite';
 export type Turn={role:'player'|'npc';cs:string;de:string;raw?:string};
@@ -20,9 +22,9 @@ export const placeNames:Record<Place,Record<Lang,string>>={
  home:{cs:'Domov',de:'Zuhause'},street:{cs:'Ulice',de:'Straße'},bakery:{cs:'Pekárna',de:'Bäckerei'},
  square:{cs:'Náměstí',de:'Marktplatz'},work:{cs:'Práce',de:'Arbeitsplatz'},library:{cs:'Knihovna',de:'Bibliothek'},
  market:{cs:'Supermarket',de:'Supermarkt'},cafe:{cs:'Kavárna',de:'Café'},park:{cs:'Park',de:'Park'},
- church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'},mountains:{cs:'Hory',de:'Berge'},restaurant:{cs:'Restaurace',de:'Restaurant'},outfitter:{cs:'Sportovní obchod',de:'Sportgeschäft'}
+ church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'},mountains:{cs:'Hory',de:'Berge'},restaurant:{cs:'Restaurace',de:'Restaurant'},outfitter:{cs:'Sportovní obchod',de:'Sportgeschäft'},pool:{cs:'Venkovní plovárna',de:'Freibad'},resort:{cs:'Horské středisko',de:'Bergsportzentrum'},bank:{cs:'Banka',de:'Bank'},theatre:{cs:'Divadlo',de:'Theater'}
 };
-export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square']};
+export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter','pool','resort','bank','theatre'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square'],pool:['street','park'],resort:['street','mountains'],bank:['street','square'],theatre:['street','square']};
 export type TownState={
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
@@ -31,8 +33,8 @@ export type TownState={
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
- version:7,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
- discovered:['home','street','bakery','work'],recommended:[],known:[],selectedNpc:null,conversations:{},
+ version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
+ discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85]
 };}
@@ -40,8 +42,8 @@ export function restoreTown(raw:unknown):TownState{
  const freshState=initialTown();
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
- if(v.version!==5&&v.version!==6&&v.version!==7)return freshState;
- return {...freshState,...v,version:7,life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal};
+ if(v.version!==5&&v.version!==6&&v.version!==7&&v.version!==8)return freshState;
+ return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
@@ -52,13 +54,17 @@ export const occupant=(s:TownState)=>{
  const outings=s.place==='mountains'&&s.minute>=8*60&&s.minute<19*60?residents.filter(r=>(Number(r.id.slice(-2))+s.day)%7===0).slice(0,5):s.place==='restaurant'&&s.minute>=11*60&&s.minute<21*60?residents.filter(r=>(Number(r.id.slice(-2))+s.day)%9===0).slice(0,4):[];
  return [...new Map([...regular,...attendees,...outings].map(r=>[r.id,r])).values()];
 };
-export const canGo=(s:TownState,to:Place)=>s.place===to||links[s.place].includes(to)&&s.discovered.includes(to);
+export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].includes(to)&&s.discovered.includes(to)&&isVenueOpen(to,s.day));
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
  const next=addTime(s,6);return {...next,place:to,selectedNpc:null};
 }
+export function fastTravel(s:TownState,to:Place):TownState{
+ if(!s.discovered.includes(to)||!isVenueOpen(to,s.day))return s;
+ const n=addTime(s,12);return {...n,place:to,selectedNpc:null};
+}
 export function goRecommended(s:TownState,to:Place):TownState{
- if(!s.recommended.includes(to)||!s.discovered.includes(to))return go(s,to);
+ if(!s.recommended.includes(to)||!s.discovered.includes(to)||!isVenueOpen(to,s.day))return go(s,to);
  const n=addTime(s,12);return {...n,place:to,selectedNpc:null};
 }
 const pair=(cs:string,de:string)=>({cs,de});
@@ -66,12 +72,34 @@ export function note(s:TownState,cs:string,de:string):TownState{return {...s,jou
 export function startConversation(s:TownState,id:string):TownState{
  if(!occupant(s).some(r=>r.id===id))return s;
  const r=byId(id)!; const prior=s.conversations[id]??fresh();if(prior.open)return {...s,selectedNpc:id};
- const greetings=prior.visits>0?pair('Zase se vidíme. Jak se ti v městečku zatím daří?','Wir sehen uns wieder! Wie gefällt es Ihnen bisher in der Stadt?'):
- pair('Ahoj, ty jsi tu nový?','Hallo, sind Sie neu hier?');
+ const longAgo=prior.lastSeen>=0&&s.day-prior.lastSeen>=8;
+ const openerOptions=[
+  pair('Ty jsi tady nový? Co tě sem přivedlo?','Bist du neu hier? Was führt dich her?'),
+  pair('Podívej se na to počasí. Co na něj říkáš?','Schau dir das Wetter an. Was sagst du dazu?'),
+  pair('Promiň, nevíš, kolik je hodin?','Entschuldige, weißt du, wie spät es ist?'),
+  pair('Už jsi tu někdy byl?','Warst du schon einmal hier?'),
+  pair('Čekáš tu taky na někoho?','Wartest du auch auf jemanden?'),
+  pair('Zrovna přemýšlím, kam dnes vyrazit. Máš nějaký tip?','Ich überlege gerade, wohin ich heute gehe. Hast du einen Tipp?'),
+  pair('Je dnes nějak rušno, nemyslíš?','Heute ist ziemlich viel los, findest du nicht?'),
+  pair('Ahoj. Líbí se ti to tu?','Hallo. Gefällt es dir hier?')
+ ];
+ const first=openerOptions[(Number(id.slice(-2))*13+s.day*7+s.minute+prior.visits*17)%openerOptions.length];
+ const greetings=prior.visits>0?(longAgo?
+ pair('Ty jsi tu dlouho nebyl! Co se u tebe změnilo?','Du warst ja lange nicht hier! Was hat sich bei dir verändert?'):
+ openerOptions[(Number(id.slice(-2))*7+s.day*11+prior.visits*3)%openerOptions.length]):first;
  const mood=moodOf(r,s.day,s.minute);
  const prompt=mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings;
- const n={...s,selectedNpc:id,conversations:{...s.conversations,[id]:{...prior,open:true,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...prompt}]}}};
- return developBond(n,id,'time');
+ const bond=s.social?.bonds[id];
+ const away=!!currentAppointment(r,s.day,s.minute);
+ const reluctant=(mood==='irritable'||mood==='stressed'||mood==='tired')&&(r.trait+s.day*7)%5<=2;
+ const refuses=(bond?.warmth??0)<-12||(reluctant&&prior.visits===0);
+ const line=refuses
+  ?pair(away?'Promiň, teď mám svoje plány. Rád si je nechám pro sebe. Měj se!':'Omlouvám se, dnes nemám chuť si povídat. Měj se!','Tut mir leid, ich habe gerade eigene Pläne und möchte sie für mich behalten. Bis dann!')
+  :prompt;
+ const forget=prior.lastSeen>=0&&s.day-prior.lastSeen>=10;
+ const remembered=forget?{...prior,asked:prior.asked.slice(-3),topic:null,repeat:0}:prior;
+ const n={...s,selectedNpc:id,conversations:{...s.conversations,[id]:{...remembered,open:!refuses,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...line}]}}};
+ return refuses?n:developBond(n,id,'time');
 }
 export function exitConversation(s:TownState):TownState{
  if(!s.selectedNpc)return s;
@@ -105,15 +133,24 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  thanks:['Uvidíme se zase?','Sehen wir uns wieder?','Měj se hezky.','Machen Sie es gut.'],
  bye:['Měj se.','Machen Sie es gut.','Díky.','Danke.'],custom:['To je zajímavé. A dál?','Interessant. Und weiter?','Co si o tom myslíš ty?','Was denken Sie darüber?']};
  const f=m.topic?follow[m.topic]:null;
+ const lastNpc=[...m.turns].reverse().find(x=>x.role==='npc');
+ const actual=contextualOptions(lastNpc,lang,m.turns.length);
  const context=f?[{id:'follow-'+m.turns,topic:'followup' as Topic,cs:f[0],de:f[1]},{id:'opinion-'+m.turns,topic:'followup' as Topic,cs:f[2],de:f[3]}]:[];
  const social=s.social??defaultSocial();
  const bond=s.social?.bonds[id];
  if((bond?.warmth??0)>=12&&(bond?.trust??0)>=8&&!social.contacts.includes(id)&&s.day>=(bond?.cooldownUntil??-1))all.push({id:'contact',topic:'contact',cs:'Mohl bych si na tebe vzít kontakt?',de:'Dürfte ich deine Nummer haben?'});
  if((bond?.trust??0)>=10&&r.age>=18)all.push({id:'flirt',topic:'flirt',cs:'S tebou je docela příjemné povídání.',de:'Mit dir kann man sich wirklich angenehm unterhalten.'});
  if((bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
+ const lived=s.life.experiences??[];
+ const unlocked:Answer[]=[];
+ if(lived.includes('movies'))unlocked.push({id:'movies-chat',topic:'followup',cs:'Včera jsem koukal na zajímavý film. Co ráda sleduješ?',de:'Gestern habe ich einen interessanten Film gesehen. Was schaust du gern?'});
+ if(lived.includes('local-news'))unlocked.push({id:'local-news-chat',topic:'followup',cs:'Četl jsem novinky z města. Zaznamenala jsi něco zajímavého?',de:'Ich habe die Stadtneuigkeiten gelesen. Ist dir etwas aufgefallen?'});
+ if(lived.includes('books'))unlocked.push({id:'book-chat',topic:'followup',cs:'Nedávno jsem dočetl knihu. Čteš ráda?',de:'Ich habe kürzlich ein Buch beendet. Liest du gern?'});
+ if(s.completed.includes('work'))unlocked.push({id:'work-chat',topic:'followup',cs:'Dneska jsem měl v práci docela zajímavý den. A ty?',de:'Mein Arbeitstag war heute ziemlich interessant. Und deiner?'});
+ all.push(...unlocked);
  const unused=all.filter(c=>c.id==='contact'||!m.asked.includes(c.id));
  const hello=m.turns.length<=1?[{id:'new-here',topic:'hello' as Topic,cs:'Ano, právě jsem se přistěhoval.',de:'Ja, ich bin gerade hergezogen.'},{id:'hello-day',topic:'hello' as Topic,cs:'Zatím se rozkoukávám. A co ty?',de:'Ich schaue mich noch um. Und wie geht es Ihnen?'}]:[];
- const current=[...hello,...context,...unused].filter(c=>!m.asked.includes(c.id)).slice(0,4);
+ const current=(actual?.length?[...actual,...unused]:[...hello,...context,...unused]).filter(c=>!m.asked.includes(c.id)).slice(0,4);
  if(!current.length)current.push({id:'more-'+m.turns,topic:'followup',cs:'Co je u tebe nového?',de:'Was gibt es Neues bei Ihnen?'});
  current.push({id:'bye',topic:'bye',cs:'Děkuji za rozhovor, měj se hezky.',de:'Danke für das Gespräch, bis bald.'});
  return current;
@@ -143,17 +180,28 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const repeated=repeat?m.repeat+1:0;
  const mood=moodOf(r,s.day,s.minute);
  const name= r.name.split(' ')[0];
+ const appointment=currentAppointment(r,s.day,s.minute);
+ const privateMood=mood==='irritable'||mood==='stressed'||mood==='tired';
+ const knowledge=s.social?.bonds[id];
+ const trusted=(knowledge?.trust??0)>=14;
+ const privacyDecline=privateMood&&(r.trait+s.day*3+m.turns.length)%4===0;
+ const hobbyReply=privacyDecline?pair('Promiň, to si dnes raději nechám pro sebe.','Das möchte ich heute lieber für mich behalten.'):
+ trusted?(()=>{
+   const descriptions=r.interests.map(k=>interestCatalog.find(x=>x.id===k)).filter(Boolean);
+   const chosen=descriptions[(r.age+s.day)%descriptions.length];
+   return pair('Když mám čas, baví mě '+(chosen?.cs.toLowerCase()??'procházky')+'. A ty?','Wenn ich Zeit habe, mag ich '+(chosen?.de??'Spaziergänge')+'. Und du?');
+ })():pair('Rád trávím čas venku. Co baví tebe?','Ich bin gern draußen. Und was machst du gern?');
  const responses:Record<Topic,{cs:string;de:string}>={
  contact:pair('Možná. Nejdřív se trochu poznejme.','Vielleicht. Lernen wir uns erst etwas besser kennen.'),
  flirt:pair('Děkuju. Uvidíme, jestli si budeme rozumět i příště.','Danke. Mal sehen, ob wir uns beim nächsten Mal auch so gut verstehen.'),
  invite:pair('Teď nevím. Dej mi prostor, rád se rozhodnu sám.','Ich weiß noch nicht. Gib mir bitte etwas Zeit, ich entscheide selbst.'),
  hello:pair('Vítej tady. Město je malé, ale občas překvapí víc než velkoměsto.','Willkommen! Die Stadt ist klein, überrascht aber manchmal mehr als eine Großstadt.'),
  name:pair('Jmenuji se '+r.name+'. A ty?','Ich heiße '+r.name+'. Und Sie?'),
- about:pair('V tomhle městě je pořád něco nového. Dnes mám ale vlastní plány.','In dieser Stadt ist immer etwas los. Heute habe ich allerdings eigene Pläne.'),
+ about:privacyDecline?pair('Nezlob se, o tom dnes nechci mluvit.','Entschuldige, darüber möchte ich heute nicht sprechen.'):pair('Zatím se tu mám docela dobře. Uvidíme, co přinese další týden.','Bisher gefällt es mir hier ganz gut. Mal sehen, was nächste Woche bringt.'),
  job:pair('Pracuji hlavně v '+placeNames[r.job??'square'].cs.toLowerCase()+(r.sideJob?' a občas mám druhou práci.':'.'),'Ich arbeite meistens bei '+placeNames[r.job??'square'].de+(r.sideJob?' und habe gelegentlich einen Nebenjob.':'.')),
  advice:pair('Zkus náměstí a knihovnu. Někdy tam narazíš na zajímavé lidi.','Schauen Sie sich den Marktplatz und die Bibliothek an. Dort trifft man interessante Leute.'),
- event:pair('Sleduj nástěnku na náměstí. Něco se tam občas pořádá.','Schauen Sie auf die Tafel am Marktplatz. Dort gibt es manchmal Veranstaltungen.'),
- hobby:pair(r.temperament==='eccentric'?'Sbírám staré klíče a hádám, od jakých byly dveří.':'Rád chodím na procházky a čtu si, když mám čas.',r.temperament==='eccentric'?'Ich sammle alte Schlüssel und rate, zu welchen Türen sie gehörten.':'Ich gehe gerne spazieren und lese, wenn ich Zeit habe.'),
+ event:pair('Něco se určitě děje. Mrkni do městského kalendáře.','Bestimmt ist etwas los. Schau im Stadtprogramm nach.'),
+ hobby:hobbyReply,
  followup:pair('To se teprve ukáže. Co bys dělal ty?','Das wird sich zeigen. Was würden Sie tun?'),
  thanks:pair('Není zač.','Gern geschehen.'),
  bye:pair('Měj se hezky!','Machen Sie es gut!'),
@@ -165,7 +213,14 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  pair('To je docela odvážné tvrzení. Jakou s tím máš zkušenost?','Das ist eine mutige Aussage. Welche Erfahrungen haben Sie damit gemacht?'),
  pair('Možná na tom něco je. Povíš mi o tom víc?','Da könnte etwas dran sein. Erzählen Sie mehr.')
  ];
- const key=topic==='custom'?variants[stableHash(input+r.id+m.turns)%variants.length]:responses[topic];
+ const livedReplies:Record<string,{cs:string;de:string}>={
+  'movies-chat':pair('To záleží na náladě. Někdy mám chuť na komedii, jindy na klidný večer.','Das hängt von der Stimmung ab. Mal Comedy, mal ein ruhiger Abend.'),
+  'local-news-chat':pair('Něco jsem zaslechl, ale nerad šířím drby bez ověření.','Ich habe etwas gehört, verbreite aber ungern unbestätigte Gerüchte.'),
+  'book-chat':pair('Občas. Ale dnes mi nějak chybí soustředění. Co jsi četl?','Manchmal. Heute fehlt mir aber die Konzentration. Was hast du gelesen?'),
+  'work-chat':pair('To znám. Někdy stačí jeden kolega a hned je o zábavu postaráno.','Das kenne ich. Manchmal reicht ein Kollege für ordentlich Unterhaltung.')
+ };
+ const contextualChoice=(choice&&livedReplies[choice.id])||(choice?contextualResponse(choice.id):null);
+ const key=contextualChoice??(topic==='custom'?variants[stableHash(input+r.id+m.turns.length)%variants.length]:responses[topic]);
  const boss=id==='npc-02'&&s.place==='work'&&topic==='advice';
  const bossIrritable=(s.day*11+s.minute*3)%5<3;
  const bossText=pair(bossIrritable?'Šéf: „Doporučil bych ti hlavně tvoje pracovní místo. Teď do práce.“':'Šéf: „Kavárna na náměstí je dobrá. Ale až po práci. A mimochodem, dnes odvádíš dobrou práci.“',bossIrritable?'Chef: „Ich empfehle dir vor allem deinen Arbeitsplatz. An die Arbeit!“':'Chef: „Das Café am Marktplatz ist gut. Aber erst nach Feierabend. Übrigens, gute Arbeit heute.“');
@@ -175,7 +230,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const interpersonal=topic==='contact'?contactOk?pair('Dobře, můžeme si někdy napsat. Jen nečekej odpověď okamžitě.','Gern, wir können uns schreiben. Aber erwarte bitte keine sofortige Antwort.'):pair('Díky za nabídku. Raději bychom se ještě poznali osobně.','Danke. Ich möchte dich lieber erst persönlich besser kennenlernen.'):
  topic==='invite'?inviteOk?pair('Káva na veřejném místě by mohla být fajn. Domů si ale hosty zatím nezvu.','Ein Kaffee an einem öffentlichen Ort wäre nett. Nach Hause lade ich aber noch niemanden ein.'):pair('Díky za pozvání. Momentálně se mi to nehodí.','Danke für die Einladung. Im Moment passt es mir nicht.'):
  topic==='flirt'?(mood==='irritable'||bond.trust<10?pair('To je milé, ale nechme tomu volný průběh.','Das ist nett, aber lassen wir es entspannt angehen.'):pair('Usmívám se. A teď mě zajímá, co ještě řekneš.','Ich muss lächeln. Jetzt bin ich gespannt, was du als Nächstes sagst.')):null;
- const contextual=interpersonal??(boss?bossText:generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key);
+ const contextual=interpersonal??(boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
  const newText=repeated?contextual:mood==='tired'?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);

@@ -1,15 +1,18 @@
 'use client';
 import {useEffect,useState} from 'react';
-import {initialTown,restoreTown,clock,dayLabel,placeNames,links,go,goRecommended,canGo,startConversation,exitConversation,reply,doShift,buy,read,occupant,residents,type TownState,type Place,type Lang,type Answer} from '../lib/world';
+import {initialTown,restoreTown,clock,dayLabel,placeNames,links,go,fastTravel,goRecommended,canGo,startConversation,exitConversation,reply,doShift,buy,read,occupant,residents,type TownState,type Place,type Lang,type Answer} from '../lib/world';
 import {phoneOpened,phoneClosed,bossInterruption} from '../lib/life';
 import {DailyLife} from './DailyLife';
 import {SocialActivities} from './SocialUI';
 import {seasonFor,collectReplies} from '../lib/social';
+import {weatherAt} from '../lib/weather';
+import {eventsForDay,eat,rest} from '../lib/life';
+import {nextSuggestion} from '../lib/guide';
 import {ArtTown,StreetView,landmarks,glyph} from './TownArt';
 import {Interaction,Quizzes,Missions,Phone} from './Interaction';
 import './world.css';
 import './panels.css';
-const VERSION='v0.7.0',SAVE='living-town-v0.5';
+const VERSION='v0.8.0',SAVE='living-town-v0.5';
 type Panel='town'|'dialogue'|'phone'|'missions'|'quiz'|'people';
 const ui={
  cs:{town:'Město',people:'Vztahy',quiz:'Výzvy',missions:'Cíle',phone:'Deník',map:'Mapa městečka',view:'Pohled hráče',dialogue:'Interakce s postavou',phoneTitle:'Telefon – centrum společenského života',season:'Roční období – město se mění',events:'Události ve městě',spring:'Jaro',summer:'Léto',autumn:'Podzim',winter:'Zima',weather:'Polojasno',wallet:'Peněženka',mindset:'Mindset',here:'Právě jsi zde',near:'Lidé poblíž',none:'Teď tu nikoho nevidíš. Zkus přijít v jinou hodinu.',meet:'Oslovit',go:'Jít',back:'Ven / zpět na ulici',home:'Domov',sleep:'Přespat do dalšího dne',shift:'Odpracovat směnu (+45 €)',buy:'Koupit preclík (2,50 €)',book:'Přečíst krátký text',web:'Přečíst užitečný článek',bookTitle:'Proč naslouchat?',bookText:'Když ti někdo něco vypráví, zkus nejdřív pochopit, co skutečně říká. Shrň vlastními slovy jeho zkušenost a zeptej se, zda chce radu. Respektování hranic druhého člověka není prohra. Vztahy vznikají z důvěry, nikoliv z přesvědčování.',webTitle:'Jak rozpoznat důvěryhodnou informaci',webText:'Ověř si autora, datum a původ důležitých tvrzení. Hledej nezávislé potvrzení. Rozlišuj fakta a názory. Silně emotivní titulek není sám o sobě důkaz pravdivosti.',finish:'Dočetl jsem a rozumím',done:'Dnes už jsi tento text četl.',recommended:'Doporučená místa',fog:'Neznámá místa zůstávají zahalená mlhou.',residents:'Obyvatelé města',known:'Poznaní lidé',unknown:'Neznámý člověk',mood:'Každý obyvatel má vlastní práci, směny, dovolené i momentální náladu.',noContact:'Vyber osobu z okolí a oslov ji.',event1:'Sportovní turnaj',event2:'Městská slavnost',event3:'Narozeniny',event4:'Farmářský trh',phone1:'Zprávy',phone2:'Kontakty',phone3:'Pozvánky',phone4:'Sociální kruh',reset:'Začít znovu',resetConfirm:'Opravdu chceš smazat místní herní postup?',notWorking:'Dnes není naplánovaná směna nebo už jsi ji odpracoval.',fired:'Zaměstnavatel tě propustil.',local:'Místní herní simulace. Skutečné AI dialogy vyžadují serverový klíč; sdílený multiplayer ještě neběží.',game:'Živé městečko',where:'Kudy dál?',available:'V okolí',reading:'Čtení',learn:'Kvíz a hádanky',schedule:'Další lidé se mohou objevit později.',head:'Živé město, které si pamatuje své příběhy.'},
@@ -30,10 +33,12 @@ export default function Page(){
  useEffect(()=>{if(ready){localStorage.setItem(SAVE,JSON.stringify(state));localStorage.setItem('living-town-lang',lang);}},[ready,state,lang]);
  useEffect(()=>{if(ready&&state.day>0&&state.day%14===0&&state.social.seasonAnnounced===seasonFor(state.day)){setSeasonNotice(state.day);}},[state.day,ready]);
  const t=ui[lang],present=occupant(state),ways=links[state.place].filter(p=>canGo(state,p));
+ const currentWeather=weatherAt(state.day),guide=nextSuggestion(state),todayEvents=eventsForDay(state.day);
  useEffect(()=>{if(panel!=='phone'||state.place!=='work')return;const interval=window.setInterval(()=>setState(s=>bossInterruption(s,lang)),15000);return ()=>window.clearInterval(interval)},[panel,state.place,lang]);
  function changePanel(p:Panel){setPanel(p);setState(s=>p==='phone'&&s.place==='work'?phoneOpened(s):s.life.phoneOpenedAt!==null?phoneClosed(s):s);}
  function navigate(to:Place){setState(s=>go(s,to));setPanel('town');setReading(null);}
  function jump(to:Place){setState(s=>goRecommended(s,to));setPanel('town');setReading(null);}
+ function jumpAnywhere(to:Place){setState(s=>fastTravel(s,to));setPanel('town');setReading(null);}
  function approach(id:string){setState(s=>startConversation(s,id));setPanel('dialogue');}
  function farewell(){setState(s=>exitConversation(s));setPanel('town');}
  async function send(input:string,choice?:Answer){
@@ -43,20 +48,21 @@ export default function Page(){
   setState(s=>reply(s,input,lang,choice,generated));setBusy(false);
  }
  function reset(){if(confirm(t.resetConfirm)){setState(initialTown());setPanel('town');setReading(null);}}
- const level=1+Math.floor(state.mindset/40);
+ const level=1+Number(['meet','buy','work'].every(x=>state.completed.includes(x)))+Number(['meet','buy','work','read','quiz','discover'].every(x=>state.completed.includes(x)));
  return <main className="world-page">
-  <header className="world-header"><div className="wordmark"><span>✥</span><div><strong>Little Elsewhere</strong><small>{t.game} · {VERSION}</small></div></div><nav className="world-topnav">{([['town',t.town],['people',t.people],['quiz',t.quiz],['missions',t.missions],['phone',t.phone]] as [Panel,string][]).map(([p,label])=><button key={p} onClick={()=>changePanel(p)} className={panel===p?'active':''}>{label}</button>)}</nav><div className="top-stats"><span>⛅ 17 °C</span><span className="gold-stat">◉ {state.wallet.toFixed(2)} €</span><span className="mind-stat">✦ {t.mindset} {state.mindset}</span><span>⚡ {Math.round(state.life.energy)}%</span><span>🍽 {Math.round(state.life.hunger)}%</span><span>Lv. {level}</span><div className="lang-choice"><button className={lang==='cs'?'active':''} onClick={()=>setLang('cs')}>CZ</button><button className={lang==='de'?'active':''} onClick={()=>setLang('de')}>DE</button></div></div></header>
+  <header className="world-header"><div className="wordmark"><span>✥</span><div><strong>Living Town</strong><small>{t.game} · {VERSION}</small></div></div><nav className="world-topnav">{([['town',t.town],['people',t.people],['missions',t.missions],['phone',t.phone]] as [Panel,string][]).map(([p,label])=><button key={p} onClick={()=>changePanel(p)} className={panel===p?'active':''}>{label}</button>)}</nav><div className="top-stats"><span>{currentWeather.symbol} {currentWeather.temperature} °C</span><span className="gold-stat">◉ {state.wallet.toFixed(2)} €</span><span className="mind-stat">✦ {t.mindset} {state.mindset}</span><span>⚡ {Math.round(state.life.energy)}%</span><span>🍽 {Math.round(state.life.hunger)}%</span><span>Lv. {level}</span><div className="lang-choice"><button className={lang==='cs'?'active':''} onClick={()=>setLang('cs')}>CZ</button><button className={lang==='de'?'active':''} onClick={()=>setLang('de')}>DE</button></div></div></header>
   <nav className="route-bar"><strong>⌖ {t.here}: {glyph[state.place]} {placeNames[state.place][lang]} <small>· {dayLabel(state.day,lang)} {clock(state.minute)}</small></strong><div>{ways.map(p=><button key={p} onClick={()=>navigate(p)}>{glyph[p]} {placeNames[p][lang]}</button>)}{state.place!=='street'&&<button onClick={()=>navigate('street')}>↩ {t.back}</button>}</div></nav>
+  {guide&&<div className="life-guide"><span>✦ {guide[lang]}</span><button onClick={()=>{if(guide.action==='travel'&&guide.destination)jumpAnywhere(guide.destination);else if(guide.action==='eat')setState(x=>eat(x));else if(guide.action==='sleep')setState(x=>rest(x));else if(guide.action==='shift')setState(x=>doShift(x));}}>{lang==='cs'?guide.actionCs:guide.actionDe} ↗</button></div>}
   <div className="world-columns">
    <section className="map-column">
     <div className="town-card"><ArtTown season={season}/><div className="fog-layer fog-a"/><div className="fog-layer fog-b"/><div className="map-badge"><h2>{t.map}</h2><small>{['🌷','☀️','🍂','❄️'][season]} {t[seasonNames[season]]}</small></div><div className="compass">N<br/>✦</div>
-    {landmarks.map(point=>{const known=state.discovered.includes(point.place),reachable=canGo(state,point.place);return <button key={point.place} className={'place-pin '+(!known?'hidden-place':'')+(state.place===point.place?' current':'')} style={{left:point.x+'%',top:point.y+'%'}} onClick={()=>{if(reachable)navigate(point.place);else if(state.recommended.includes(point.place))jump(point.place)}} title={known?placeNames[point.place][lang]:t.fog}><span>{known?glyph[point.place]:'?'}</span>{known&&<b>{placeNames[point.place][lang]}</b>}{state.recommended.includes(point.place)&&<em>★</em>}</button>})}
+    {landmarks.map(point=>{const known=state.discovered.includes(point.place),reachable=canGo(state,point.place);return <button key={point.place} className={'place-pin '+(!known?'hidden-place':'')+(state.place===point.place?' current':'')} style={{left:point.x+'%',top:point.y+'%'}} onClick={()=>{if(known)jumpAnywhere(point.place)}} title={known?placeNames[point.place][lang]:t.fog}><span>{known?glyph[point.place]:'?'}</span>{known&&<b>{placeNames[point.place][lang]}</b>}{state.recommended.includes(point.place)&&<em>★</em>}</button>})}
     </div>
     {seasonNotice===state.day&&<div className="season-notice" onClick={()=>setSeasonNotice(null)} role="status">{['🌷','☀️','🍂','❄️'][season]} {t[seasonNames[season]]} <button onClick={()=>setSeasonNotice(null)}>×</button></div>}
-    <div className="map-bottom compact-events"><section className="events-box"><h3>☆ {t.events}</h3><div className="event-list">{eventSymbols.map((e,i)=><button key={i} onClick={()=>changePanel('phone')}><span>{e}</span><b>{t[('event'+(i+1)) as 'event1'|'event2'|'event3'|'event4']}</b></button>)}</div></section></div>
+    <div className="map-bottom compact-events"><section className="events-box"><h3>☆ {t.events}</h3><div className="event-list">{todayEvents.length?todayEvents.slice(0,4).map(ev=><button key={ev.id} onClick={()=>changePanel('phone')}><span>{ev.emoji}</span><b>{ev[lang]}</b></button>):<button onClick={()=>changePanel('phone')}><span>📅</span><b>{lang==='cs'?'Dnes bez událostí':'Heute keine Termine'}</b></button>}</div></section></div>
    </section>
    <aside className="world-side">
-    <section className="view-card"><h2>✥ {t.view}</h2><StreetView place={state.place} lang={lang} season={season}/><div className="local-people"><strong>{t.near} ({present.length})</strong><div>{present.length?present.slice(0,6).map(p=><button key={p.id} onClick={()=>approach(p.id)}><span>{p.portrait}</span><small>{state.known.includes(p.id)?p.name:t.unknown}</small></button>):<p>{t.none}</p>}</div></div></section>
+    <section className="view-card"><h2>✥ {t.view}</h2><StreetView place={state.place} lang={lang} season={season} hour={Math.floor(state.minute/60)}/><div className="local-people"><strong>{t.near} ({present.length})</strong><div>{present.length?present.slice(0,6).map(p=><button key={p.id} onClick={()=>approach(p.id)}><span>{p.portrait}</span><small>{state.known.includes(p.id)?p.name:t.unknown}</small></button>):<p>{t.none}</p>}</div></div></section>
     <section className="activity-card"><h2>✥ {panel==='town'?t.dialogue:panel==='dialogue'?t.dialogue:panel==='quiz'?t.learn:panel==='missions'?t.missions:panel==='people'?t.residents:t.phoneTitle}</h2>
     {panel==='dialogue'?<Interaction state={state} lang={lang} onApproach={approach} onExit={farewell} onSend={send} busy={busy}/>:
      panel==='quiz'?<Quizzes state={state} lang={lang} onState={setState}/>:
@@ -71,7 +77,7 @@ export default function Page(){
      <DailyLife state={state} lang={lang} onState={setState}/><SocialActivities state={state} lang={lang} onState={setState}/>
 {state.recommended.length>0&&<section className="recommended-shortcuts">{state.recommended.map(r=><button key={r} onClick={()=>jump(r)}>★ {placeNames[r][lang]} ↗</button>)}</section>}
      {reading&&<div className="reading-card"><h4>{reading==='book'?t.bookTitle:t.webTitle}</h4><p>{reading==='book'?t.bookText:t.webText}</p><button disabled={(reading==='book'?state.lastRead:state.lastResearch)===state.day} onClick={()=>{setState(s=>read(s,reading));setReading(null);}}>{t.finish} · +{reading==='book'?'3':'2'} {t.mindset}</button></div>}
-     <button className="action-row" onClick={()=>changePanel('quiz')}>🧩 {t.learn} →</button></div>}
+     {state.place==='library'&&<button className="action-row" onClick={()=>changePanel('quiz')}>🧩 {t.learn} →</button>}</div>}
     </section>
     <section className="handy-card"><h2>✥ {t.phoneTitle}</h2><div className="phone-bg"><div className="handset"><div className="notch"/><div className="handset-clock">{clock(state.minute)} ·●●</div><button onClick={()=>changePanel('phone')}>💬 {t.phone1}</button><button onClick={()=>changePanel('phone')}>▦ {t.phone2}</button><button onClick={()=>changePanel('phone')}>♟ {t.phone3}</button><button onClick={()=>changePanel('phone')}>♡ {t.phone4}</button><button onClick={()=>changePanel('quiz')}>✦ {t.mindset} <b>{state.mindset}</b></button></div></div></section>
    </aside>

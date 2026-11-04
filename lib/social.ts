@@ -79,19 +79,43 @@ export function holiday(s:TownState):TownState{
  const n=addTime(s,48*60);
  return {...n,place:'home',wallet:s.wallet-1200,walletHistory:[...s.walletHistory,s.wallet-1200],social:{...social,lastHoliday:s.day},life:{...n.life,energy:95,hunger:30},journal:{cs:[...s.journal.cs,'Vrátil ses z dovolené. Na recepci tě omylem zapsali jako delegáta konference o hotelových polštářích.'],de:[...s.journal.de,'Zurück aus dem Urlaub. Im Hotel wurdest du versehentlich als Delegierter einer Konferenz über Hotelkissen eingetragen.']}};
 }
-export function restaurantMeal(s:TownState):TownState{
- if(s.place!=='restaurant'||s.wallet<18)return s;const n=addTime(s,45);
- return {...n,wallet:s.wallet-18,walletHistory:[...s.walletHistory,s.wallet-18],life:{...n.life,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)}};
+export function restaurantQuote(s:TownState,guestId?:string):number{
+ // One menu price per day and game visit; cents are deterministic so the quoted price never changes while deciding.
+ const baseCents=2000+((s.day*137+s.minute*7+s.social.tripCount*59+173)%1947);
+ return Math.round(baseCents*(guestId?2:1))/100;
+}
+export function restaurantMeal(s:TownState,guestId?:string):TownState{
+ if(s.place!=='restaurant')return s;
+ const guest=guestId&&s.social.contacts.includes(guestId)&&getBond(s,guestId).warmth>=18?guestId:undefined;
+ if(guestId&&!guest)return s;
+ const price=restaurantQuote(s,guest);
+ if(s.wallet<price)return s;
+ const n=addTime(s,45);
+ const social=guest?{...n.social,bonds:{...n.social.bonds,[guest]:{...getBond(n,guest),warmth:Math.min(100,getBond(n,guest).warmth+4),trust:Math.min(100,getBond(n,guest).trust+2)}}}:n.social;
+ return {...n,wallet:Math.round((s.wallet-price)*100)/100,walletHistory:[...s.walletHistory,Math.round((s.wallet-price)*100)/100],
+ life:{...n.life,lastMeal:n.day*1440+n.minute,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)},social};
+}
+export function theatreTicket(s:TownState):TownState{
+ if(s.place!=='street'&&s.place!=='square'&&s.place!=='theatre')return s;
+ const fee=Math.round((11.9+((s.day*17+s.minute)%910)/100)*100)/100;
+ if(s.wallet<fee)return s;
+ const n=addTime(s,100);
+ return {...n,place:'theatre',wallet:Math.round((s.wallet-fee)*100)/100,
+ walletHistory:[...s.walletHistory,Math.round((s.wallet-fee)*100)/100],
+ journal:{cs:[...s.journal.cs,'Byl jsi v divadle. V druhém dějství se herec zarazil a publikum to považovalo za součást představení.'],
+ de:[...s.journal.de,'Du warst im Theater. Im zweiten Akt stockte ein Schauspieler, das Publikum hielt es für Absicht.']}};
 }
 
-export function sport(s:TownState,kind:'bike'|'swim'|'ski'):TownState{
+
+export function sport(s:TownState,kind:'bike'|'swim'|'ski'|'downhill'):TownState{
  const social=s.social??defaultSocial(),season=seasonFor(s.day);
  if(s.life.energy<25)return s;
  if(kind==='bike'&&(s.place!=='park'||!social.wardrobe.includes('bike')))return s;
- if(kind==='swim'&&(s.place!=='park'||season!==1||!social.wardrobe.includes('swimsuit')))return s;
- if(kind==='ski'&&(s.place!=='mountains'||season!==3||!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')))return s;
+ if(kind==='swim'&&(s.place!=='pool'||season!==1||!social.wardrobe.includes('swimsuit')))return s;
+ if(kind==='ski'&&(s.place!=='resort'||season!==3||!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')))return s;
+ if(kind==='downhill'&&(s.place!=='resort'||(season!==1&&season!==2)||!social.wardrobe.includes('bike')))return s;
  const n=addTime(s,90);
  return {...n,life:{...n.life,energy:Math.max(0,n.life.energy-12),hunger:Math.min(100,n.life.hunger+13)},
- journal:{cs:[...s.journal.cs,kind==='bike'?'Projížďka na kole: cizí pes tě předběhl s výrazem profesionálního závodníka.':kind==='swim'?'Koupání v létě: jeden plavec si zapomněl, že má na sobě sluneční brýle.':'Lyžování: stopa vedla přímo ke stánku s čajem. Podezřele praktické.'],
- de:[...s.journal.de,kind==='bike'?'Radtour: Ein fremder Hund überholt dich mit der Miene eines Profis.':kind==='swim'?'Sommerschwimmen: Ein Schwimmer vergisst, dass er noch seine Sonnenbrille trägt.':'Skifahren: Die Spur endet direkt am Teestand. Verdächtig praktisch.']}};
+ journal:{cs:[...s.journal.cs,kind==='bike'?'Projížďka na kole: cizí pes tě předběhl s výrazem profesionálního závodníka.':kind==='swim'?'Koupání v létě: jeden plavec si zapomněl, že má na sobě sluneční brýle.':kind==='ski'?'Lyžování: stopa vedla přímo ke stánku s čajem. Podezřele praktické.':'Downhill: na sjezdovce tě předjel důchodce s klidným výrazem a zvonkem na řídítkách.'],
+ de:[...s.journal.de,kind==='bike'?'Radtour: Ein fremder Hund überholt dich mit der Miene eines Profis.':kind==='swim'?'Sommerschwimmen: Ein Schwimmer vergisst, dass er noch seine Sonnenbrille trägt.':kind==='ski'?'Skifahren: Die Spur endet direkt am Teestand. Verdächtig praktisch.':'Downhill: Ein Rentner überholt dich seelenruhig mit Klingel am Lenker.']}};
 }

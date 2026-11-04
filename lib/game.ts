@@ -1,5 +1,5 @@
 export type Lang='cs'|'de';
-export type Place='home'|'street'|'bakery'|'square'|'work'|'library'|'market'|'cafe'|'park'|'church'|'hotel'|'gym'|'mountains'|'restaurant'|'outfitter';
+export type Place='home'|'street'|'bakery'|'square'|'work'|'library'|'market'|'cafe'|'park'|'church'|'hotel'|'gym'|'mountains'|'restaurant'|'outfitter'|'pool'|'resort'|'bank'|'theatre';
 export type NpcId='neighbor'|'baker'|'boss'|'librarian';
 export type Goal='neighbor'|'recommend'|'purchase'|'work'|'read'|'research';
 export type Topic='intro'|'name'|'dog'|'advice'|'product'|'purchase'|'job'|'books'|'website'|'followup'|'generic'|'thanks'|'bye';
@@ -59,11 +59,11 @@ export function dayName(lang:Lang,day:number){const cs=['Sobota','Neděle','Pond
 export function npcAt(place:Place):NpcId|null{return place==='street'?'neighbor':place==='bakery'?'baker':place==='work'?'boss':place==='library'?'librarian':null;}
 export function available(s:GameState){return npcAt(s.place)!==null;}
 export function memory(s:GameState,npc:NpcId){return s.conversations?.[npc]??blank();}
-export const routes:Record<Place,Place[]>={home:['street'],street:['home','bakery','work','square','library'],bakery:['street'],work:['street'],square:['street','library'],library:['street','square'],market:['street'],cafe:['street'],park:['street'],church:['street'],hotel:['street'],gym:['street'],mountains:['street'],restaurant:['street'],outfitter:['street']};
+export const routes:Record<Place,Place[]>={home:['street'],street:['home','bakery','work','square','library'],bakery:['street'],work:['street'],square:['street','library'],library:['street','square'],market:['street'],cafe:['street'],park:['street'],church:['street'],hotel:['street'],gym:['street'],mountains:['street'],restaurant:['street'],outfitter:['street'],pool:['street'],resort:['mountains','street'],bank:['street'],theatre:['street','square']};
 export function canTravel(s:GameState,p:Place){return s.place===p||routes[s.place].includes(p)&&s.discovered.includes(p);}
 export function move(s:GameState,p:Place,lang:Lang):GameState{
  if(!canTravel(s,p))return s;
- const names:Record<Place,[string,string]>={home:['Domov','Zuhause'],street:['Ulice','Straße'],bakery:['Pekárna','Bäckerei'],square:['Náměstí','Marktplatz'],work:['Práce','Arbeit'],library:['Knihovna','Bibliothek'],market:['Supermarket','Supermarkt'],cafe:['Kavárna','Café'],park:['Park','Park'],church:['Kostel','Kirche'],hotel:['Hotel','Hotel'],gym:['Fitness','Fitnessstudio'],mountains:['Hory','Berge'],restaurant:['Restaurace','Restaurant'],outfitter:['Sportovní obchod','Sportgeschäft']};
+ const names:Record<Place,[string,string]>={home:['Domov','Zuhause'],street:['Ulice','Straße'],bakery:['Pekárna','Bäckerei'],square:['Náměstí','Marktplatz'],work:['Práce','Arbeit'],library:['Knihovna','Bibliothek'],market:['Supermarket','Supermarkt'],cafe:['Kavárna','Café'],park:['Park','Park'],church:['Kostel','Kirche'],hotel:['Hotel','Hotel'],gym:['Fitness','Fitnessstudio'],mountains:['Hory','Berge'],restaurant:['Restaurace','Restaurant'],outfitter:['Sportovní obchod','Sportgeschäft'],pool:['Venkovní plovárna','Freibad'],resort:['Horské středisko','Bergsportzentrum'],bank:['Banka','Bank'],theatre:['Divadlo','Theater']};
  return {...s,place:p,minute:s.minute+5,journal:{cs:[...s.journal.cs,'Navštíveno: '+names[p][0]],de:[...s.journal.de,'Besucht: '+names[p][1]]}};
 }
 export function begin(s:GameState,lang:Lang):GameState{

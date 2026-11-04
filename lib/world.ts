@@ -52,7 +52,7 @@ export function note(s:TownState,cs:string,de:string):TownState{return {...s,jou
 export function startConversation(s:TownState,id:string):TownState{
  if(!isPresent(id,s.place,s.day,s.minute))return s;
  const r=byId(id)!; const prior=s.conversations[id]??fresh();if(prior.open)return {...s,selectedNpc:id};
- const greetings=prior.visits>0?pair('Ráda tě zase vidím. O čem jsme to minule mluvili?','Schön, Sie wiederzusehen. Worüber haben wir zuletzt gesprochen?'):
+ const greetings=prior.visits>0?pair('Zase se vidíme. Co je u tebe nového?','Wir sehen uns wieder! Was gibt es Neues bei Ihnen?'):
  pair('Ahoj, potřebuješ něco?','Hallo, kann ich Ihnen helfen?');
  const mood=moodOf(r,s.day,s.minute);
  const prompt=mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings;
@@ -61,7 +61,7 @@ export function startConversation(s:TownState,id:string):TownState{
 export function exitConversation(s:TownState):TownState{
  if(!s.selectedNpc)return s;
  const id=s.selectedNpc,prev=s.conversations[id]??fresh();
- const bye=pair('Rád jsem si popovídal. Tak zase někdy!','Schön, dass wir gesprochen haben. Bis zum nächsten Mal!');
+ const bye=pair('Díky za rozhovor. Tak zase někdy!','Danke für das Gespräch. Bis zum nächsten Mal!');
  return {...s,conversations:{...s.conversations,[id]:{...prev,open:false,turns:[...prev.turns,{role:'npc',...bye}] }},selectedNpc:null};
 }
 export function choices(s:TownState,lang:Lang):Answer[]{

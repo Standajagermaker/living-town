@@ -96,7 +96,7 @@ function infer(s:string):Topic{
  if(/proč|warum|wie|jak|víc|mehr/.test(v))return 'followup';
  return 'custom';
 }
-export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generated?:string):TownState{
+export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generated?:{cs:string;de:string}):TownState{
  const id=s.selectedNpc;if(!id||!isPresent(id,s.place,s.day,s.minute))return {...s,selectedNpc:null};
  const r=byId(id)!;const m=s.conversations[id]??fresh();if(!m.open)return s;
  const topic=choice?.topic??infer(input);
@@ -104,7 +104,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const askedId=choice?.id??topic;
  const repeat=m.asked.includes(askedId);
  const repeated=repeat?m.repeat+1:0;
- const mood=moodOf(r,s.day,s.minute);const moodAdverb=lang==='cs'?(mood==='tired'?' Jsem ale už unavený.':mood==='stressed'?' Dnes toho mám hodně.':''):(mood==='tired'?' Ich bin allerdings schon müde.':mood==='stressed'?' Ich habe heute viel zu tun.':'');
+ const mood=moodOf(r,s.day,s.minute);
  const name= r.name.split(' ')[0];
  const responses:Record<Topic,{cs:string;de:string}>={
  hello:pair('Ahoj. Rád tě poznávám.','Hallo. Freut mich, Sie kennenzulernen.'),
@@ -126,7 +126,8 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  pair('Možná na tom něco je. Povíš mi o tom víc?','Da könnte etwas dran sein. Erzählen Sie mehr.')
  ];
  const key=topic==='custom'?variants[stableHash(input+r.id+m.turns)%variants.length]:responses[topic];
- const newText=generated?.trim()?pair(generated.trim(),generated.trim()):key;
+ const contextual=generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key;
+ const newText=topic==='bye'||repeated?contextual:mood==='tired'?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);
  let next:TownState={...s,minute:s.minute+2,conversations:{...s.conversations,[id]:{...m,asked:[...seen],topic,repeat:repeated,turns:[...m.turns,{role:'player',cs:input,de:input,raw:input},npcTurn]}}};

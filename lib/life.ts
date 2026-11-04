@@ -136,7 +136,7 @@ export function attendEvent(s:TownState,event:TownEvent):TownState{
 }
 export function lookAround(s:TownState):TownState{
  if(s.place!=='street'&&s.place!=='square')return s;
- const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square','mountains','restaurant','outfitter','pool','resort','bank','theatre'];
+ const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop'];
  const available=hidden.filter(p=>!s.discovered.includes(p));
  const next=addTime(s,8);
  if(!available.length)return next;

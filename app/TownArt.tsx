@@ -26,8 +26,8 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
 export function StreetView({place,lang,season,hour=12}:{place:Place;lang:Lang;season:number;hour?:number}){
  const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work',theatre:'theatre'};
  const asset=named[place]??null;
- const [format,setFormat]=useState<'webp'|'svg'>('webp');
- useEffect(()=>setFormat('webp'),[place]);
+ const [format,setFormat]=useState<'webp'|'svg'>('svg');
+ useEffect(()=>setFormat('svg'),[place]);
  if(asset)return <div className={'player-photo-scene season-'+season+' '+(hour>=20||hour<6?'is-night':'')} role="img" aria-label={placeNames[place][lang]}>
    <img src={`/scenes/${asset}.${format}`} alt={placeNames[place][lang]} onError={()=>{if(format==='webp')setFormat('svg')}}/>
    <div className="perspective-label">{glyph[place]} {placeNames[place][lang]}</div>

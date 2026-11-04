@@ -36,7 +36,7 @@ export type TownState={
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
  playerAge:number;ageConfirmed:boolean;stress:number;vacationDays:number;onHoliday:boolean;travelCity:'home'|'lake'|'historic'|'alps';workShifts:number;careerRank:number;monthlyBilling:number;utilitiesDue:number;housingStatus:'rented'|'warning'|'temporary'|'owned';family:{relationship:'single'|'dating'|'partner'|'married';partnerId?:string;children:number};pet:Pet|null;
- completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;factsSeen:string[];lastFactDay:number;marketVisits:number;marketEncounterResolved:number;marketLastResponse?:{cs:string;de:string};marketLastResponseVisit?:number;railTalkDay:number;railTalkOutcome?:{cs:string;de:string};
+ completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;factsSeen:string[];lastFactDay:number;marketVisits:number;marketEncounterResolved:number;marketLastResponse?:{cs:string;de:string};marketLastResponseVisit?:number;railTalkDay:number;railTalkOutcome?:{cs:string;de:string};railIncident?:{kind:'meeting'|'connection'|'stranger'|'hotel';day:number;seed:number};
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {

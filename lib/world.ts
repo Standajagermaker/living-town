@@ -108,10 +108,10 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  const context=f?[{id:'follow-'+m.turns,topic:'followup' as Topic,cs:f[0],de:f[1]},{id:'opinion-'+m.turns,topic:'followup' as Topic,cs:f[2],de:f[3]}]:[];
  const social=s.social??defaultSocial();
  const bond=s.social?.bonds[id];
- if((bond?.warmth??0)>=6&&!social.contacts.includes(id)&&!bond?.requested&&s.day>=(bond?.cooldownUntil??-1))all.push({id:'contact',topic:'contact',cs:'Mohl bych si na tebe vzít kontakt?',de:'Dürfte ich deine Nummer haben?'});
+ if((bond?.warmth??0)>=12&&(bond?.trust??0)>=8&&!social.contacts.includes(id)&&s.day>=(bond?.cooldownUntil??-1))all.push({id:'contact',topic:'contact',cs:'Mohl bych si na tebe vzít kontakt?',de:'Dürfte ich deine Nummer haben?'});
  if((bond?.trust??0)>=10&&r.age>=18)all.push({id:'flirt',topic:'flirt',cs:'S tebou je docela příjemné povídání.',de:'Mit dir kann man sich wirklich angenehm unterhalten.'});
  if((bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
- const unused=all.filter(c=>!m.asked.includes(c.id));
+ const unused=all.filter(c=>c.id==='contact'||!m.asked.includes(c.id));
  const current=[...context,...unused].slice(0,4);
  if(!current.length)current.push({id:'more-'+m.turns,topic:'followup',cs:'Co je u tebe nového?',de:'Was gibt es Neues bei Ihnen?'});
  current.push({id:'bye',topic:'bye',cs:'Děkuji za rozhovor, měj se hezky.',de:'Danke für das Gespräch, bis bald.'});

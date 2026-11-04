@@ -29,6 +29,7 @@ export default function Page(){
  const [ready,setReady]=useState(false);
  const [seasonNotice,setSeasonNotice]=useState<number|null>(null);
  const [busy,setBusy]=useState(false);
+ const [homeFocus,setHomeFocus]=useState<'room'|'tv'|'phone'>('room');
  useEffect(()=>{try{const old=localStorage.getItem(SAVE);if(old)setState(restoreTown(JSON.parse(old)));const locale=localStorage.getItem('living-town-lang');if(locale==='cs'||locale==='de')setLang(locale);}catch{}setReady(true);},[]);
  useEffect(()=>{if(ready){localStorage.setItem(SAVE,JSON.stringify(state));localStorage.setItem('living-town-lang',lang);}},[ready,state,lang]);
  useEffect(()=>{if(ready&&state.day>0&&state.day%14===0&&state.social.seasonAnnounced===seasonFor(state.day)){setSeasonNotice(state.day);}},[state.day,ready]);
@@ -36,9 +37,9 @@ export default function Page(){
  const currentWeather=weatherAt(state.day),guide=nextSuggestion(state),todayEvents=eventsForDay(state.day);
  useEffect(()=>{if(panel!=='phone'||state.place!=='work')return;const interval=window.setInterval(()=>setState(s=>bossInterruption(s,lang)),15000);return ()=>window.clearInterval(interval)},[panel,state.place,lang]);
  function changePanel(p:Panel){setPanel(p);setState(s=>p==='phone'&&s.place==='work'?phoneOpened(s):s.life.phoneOpenedAt!==null?phoneClosed(s):s);}
- function navigate(to:Place){setState(s=>go(s,to));setPanel('town');setReading(null);}
- function jump(to:Place){setState(s=>goRecommended(s,to));setPanel('town');setReading(null);}
- function jumpAnywhere(to:Place){setState(s=>fastTravel(s,to));setPanel('town');setReading(null);}
+ function navigate(to:Place){setState(s=>go(s,to));setPanel('town');setReading(null);setHomeFocus('room');}
+ function jump(to:Place){setState(s=>goRecommended(s,to));setPanel('town');setReading(null);setHomeFocus('room');}
+ function jumpAnywhere(to:Place){setState(s=>fastTravel(s,to));setPanel('town');setReading(null);setHomeFocus('room');}
  function approach(id:string){setState(s=>startConversation(s,id));setPanel('dialogue');}
  function farewell(){setState(s=>exitConversation(s));setPanel('town');}
  async function send(input:string,choice?:Answer){
@@ -47,7 +48,7 @@ export default function Page(){
   try{const response=await fetch('/api/dialogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,lang,text:input,topic:choice?.topic,day:state.day,minute:state.minute,history:state.conversations[id]?.turns.slice(-10)??[]})});if(response.ok){const data=await response.json();if(typeof data.cs==='string'&&typeof data.de==='string')generated={cs:data.cs,de:data.de};}}catch{}
   setState(s=>reply(s,input,lang,choice,generated));setBusy(false);
  }
- function reset(){if(confirm(t.resetConfirm)){setState(initialTown());setPanel('town');setReading(null);}}
+ function reset(){if(confirm(t.resetConfirm)){setState(initialTown());setPanel('town');setReading(null);setHomeFocus('room');}}
  const level=1+Number(['meet','buy','work'].every(x=>state.completed.includes(x)))+Number(['meet','buy','work','read','quiz','discover'].every(x=>state.completed.includes(x)));
  return <main className="world-page">
   <header className="world-header"><div className="wordmark"><span>✥</span><div><strong>Living Town</strong><small>{t.game} · {VERSION}</small></div></div><nav className="world-topnav">{([['town',t.town],['people',t.people],['missions',t.missions],['phone',t.phone]] as [Panel,string][]).map(([p,label])=><button key={p} onClick={()=>changePanel(p)} className={panel===p?'active':''}>{label}</button>)}</nav><div className="top-stats"><span>{currentWeather.symbol} {currentWeather.temperature} °C</span><span className="gold-stat">◉ {state.wallet.toFixed(2)} €</span><span className="mind-stat">✦ {t.mindset} {state.mindset}</span><span>⚡ {Math.round(state.life.energy)}%</span><span>🍽 {Math.round(state.life.hunger)}%</span><span>Lv. {level}</span><div className="lang-choice"><button className={lang==='cs'?'active':''} onClick={()=>setLang('cs')}>CZ</button><button className={lang==='de'?'active':''} onClick={()=>setLang('de')}>DE</button></div></div></header>
@@ -62,7 +63,7 @@ export default function Page(){
     <div className="map-bottom compact-events"><section className="events-box"><h3>☆ {t.events}</h3><div className="event-list">{todayEvents.length?todayEvents.slice(0,4).map(ev=><button key={ev.id} onClick={()=>changePanel('phone')}><span>{ev.emoji}</span><b>{ev[lang]}</b></button>):<button onClick={()=>changePanel('phone')}><span>📅</span><b>{lang==='cs'?'Dnes bez událostí':'Heute keine Termine'}</b></button>}</div></section></div>
    </section>
    <aside className="world-side">
-    <section className="view-card"><h2>✥ {t.view}</h2><StreetView place={state.place} lang={lang} season={season} hour={Math.floor(state.minute/60)}/><div className="local-people"><strong>{t.near} ({present.length})</strong><div>{present.length?present.slice(0,6).map(p=><button key={p.id} onClick={()=>approach(p.id)}><span>{p.portrait}</span><small>{state.known.includes(p.id)?p.name:t.unknown}</small></button>):<p>{t.none}</p>}</div></div></section>
+    <section className="view-card"><h2>✥ {t.view}</h2><StreetView place={state.place} lang={lang} season={season} hour={Math.floor(state.minute/60)} homeFocus={state.place==='home'?homeFocus:'room'}/>{state.place==='home'&&homeFocus!=='room'&&<button className="camera-return" onClick={()=>setHomeFocus('room')}>{lang==='cs'?'↩ Zpět do pokoje':'↩ Zurück ins Zimmer'}</button>}<div className="local-people"><strong>{t.near} ({present.length})</strong><div>{present.length?present.slice(0,6).map(p=><button key={p.id} onClick={()=>approach(p.id)}><span>{p.portrait}</span><small>{state.known.includes(p.id)?p.name:t.unknown}</small></button>):<p>{t.none}</p>}</div></div></section>
     <section className="activity-card"><h2>✥ {panel==='town'?t.dialogue:panel==='dialogue'?t.dialogue:panel==='quiz'?t.learn:panel==='missions'?t.missions:panel==='people'?t.residents:t.phoneTitle}</h2>
     {panel==='dialogue'?<Interaction state={state} lang={lang} onApproach={approach} onExit={farewell} onSend={send} busy={busy}/>:
      panel==='quiz'?<Quizzes state={state} lang={lang} onState={setState}/>:
@@ -74,7 +75,7 @@ export default function Page(){
 {state.place==='work'&&state.life.lastBossEvent===state.day&&<div className="feedback">{state.journal[lang].slice(-1)[0]}</div>}
      {state.place==='bakery'&&<button className="action-row" disabled={state.wallet<2.5} onClick={()=>setState(s=>buy(s))}>🥨 {t.buy}</button>}
      {state.place==='library'&&<button className="action-row" onClick={()=>setReading('web')}>🌐 {t.web}</button>}
-     <DailyLife state={state} lang={lang} onState={setState}/><SocialActivities state={state} lang={lang} onState={setState}/>
+     <DailyLife state={state} lang={lang} onState={setState} onFocus={setHomeFocus}/><SocialActivities state={state} lang={lang} onState={setState}/>
 {state.recommended.length>0&&<section className="recommended-shortcuts">{state.recommended.map(r=><button key={r} onClick={()=>jump(r)}>★ {placeNames[r][lang]} ↗</button>)}</section>}
      {reading&&<div className="reading-card"><h4>{reading==='book'?t.bookTitle:t.webTitle}</h4><p>{reading==='book'?t.bookText:t.webText}</p><button disabled={(reading==='book'?state.lastRead:state.lastResearch)===state.day} onClick={()=>{setState(s=>read(s,reading));setReading(null);}}>{t.finish} · +{reading==='book'?'3':'2'} {t.mindset}</button></div>}
      {state.place==='library'&&<button className="action-row" onClick={()=>changePanel('quiz')}>🧩 {t.learn} →</button>}</div>}

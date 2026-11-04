@@ -3,6 +3,7 @@ import {useState} from 'react';
 import {byId,choices,quizzes,solve,residents,type TownState,type Lang,type Answer} from '../lib/world';
 import {EventCalendar} from './DailyLife';
 import {SocialPhone} from './SocialUI';
+import {interestCatalog,appointmentsFor} from '../lib/residents';
 type Props={state:TownState;lang:Lang;onState:(next:TownState)=>void;onApproach:(id:string)=>void;onExit:()=>void;onSend:(text:string,choice?:Answer)=>Promise<void>;busy:boolean};
 const tx={
  cs:{title:'Interakce s postavou',people:'Obyvatelé',dialogue:'Rozhovor',noNpc:'Oslov někoho poblíž a rozhovor začne.',your:'Vlastní odpověď',placeholder:'Napiš, co chceš opravdu říct…',send:'Odeslat',waiting:'Postava přemýšlí…',goodbye:'Rozloučit se',again:'Navázat na další rozhovor',resume:'Rozhovor navazuje na předchozí setkání.',undiscovered:'Neznámý obyvatel',silent:'Postava je právě pryč. Můžeš odejít a vrátit se jindy.',goBack:'Zpět do okolí'},

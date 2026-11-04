@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
 import {byId,callRestaurantStaff,fastTravel} from '../lib/world';
-import {destinations,travelToCity,returnFromHoliday,railConversationAvailable,railDelayMinutes,railwayConversation} from '../lib/trainTravel';
+import {destinations,travelToCity,returnFromHoliday,railConversationAvailable,railDelayMinutes,railwayConversation,railwayIncidentTitle,railwayIncidentText,resolveRailIncident} from '../lib/trainTravel';
 import {sendText,payRent,payUtilities,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
 const dict={
@@ -28,6 +28,15 @@ export function SocialActivities({state,lang,onState}:Props){
  <p>{lang==='cs'?'Energie a služby':'Nebenkosten'}: {state.utilitiesDue.toFixed(2)} €</p>
  <button disabled={state.utilitiesDue<=0||state.wallet<state.utilitiesDue} onClick={()=>onState(payUtilities(state))}>{lang==='cs'?'Zaplatit energie':'Nebenkosten bezahlen'}</button>
  </div>}
+ {state.railIncident&&(state.place==='train'||state.place==='hotel')&&<div className="life-object rail-complication">
+ <h4>⚠️ {railwayIncidentTitle(state.railIncident.kind,lang)}</h4>
+ <p>{railwayIncidentText(state.railIncident.kind,lang)}</p>
+ <div className="market-encounter-actions">
+ <button onClick={()=>onState(resolveRailIncident(state,'notify'))}>{lang==='cs'?'📞 Dát vědět předem':'📞 Rechtzeitig Bescheid geben'}</button>
+ <button onClick={()=>onState(resolveRailIncident(state,'negotiate'))}>{lang==='cs'?'🤝 Domluvit řešení':'🤝 Eine Lösung aushandeln'}</button>
+ <button onClick={()=>onState(resolveRailIncident(state,'improvise'))}>{lang==='cs'?'⚡ Rychle improvizovat':'⚡ Spontan improvisieren'}</button>
+ </div>
+ </div>}
  {state.place==='train'&&<div className="life-object railway-panel"><h4>🚉 {lang==='cs'?'Vlakové spojení':'Zugverbindungen'}</h4>
  <p>{lang==='cs'?'Dovolená':'Urlaub'}: {state.vacationDays} {lang==='cs'?'dní':'Tage'}</p>
  {railConversationAvailable(state)&&<div className="rail-delay-story">
@@ -41,7 +50,7 @@ export function SocialActivities({state,lang,onState}:Props){
  </div></div>}
  {state.railTalkDay===state.day&&state.railTalkOutcome&&<p className="market-followup">{state.railTalkOutcome[lang]}</p>}
  {!state.onHoliday?destinations.map(d=><div className="shop-item" key={d.id}><span><strong>{d[lang]}</strong> · {d.minutes} min<br/>{lang==='cs'?'Jízdenka':'Fahrkarte'} {d.ticket} € + {lang==='cs'?'hotel':'Hotel'} {d.hotel} € · 2 {lang==='cs'?'dny volna':'Urlaubstage'}</span>
- <button disabled={state.wallet<d.ticket+d.hotel||state.vacationDays<2} onClick={()=>onState(travelToCity(state,d.id))}>{lang==='cs'?'Odjet':'Abfahren'}</button></div>):<button disabled={state.wallet<29} onClick={()=>onState(returnFromHoliday(state))}>{lang==='cs'?'Vrátit se domů (29 €)':'Zurück nach Hause (29 €)'}</button>}
+ <button disabled={state.wallet<d.ticket+d.hotel||state.vacationDays<2||Boolean(state.railIncident)} onClick={()=>onState(travelToCity(state,d.id))}>{lang==='cs'?'Odjet':'Abfahren'}</button></div>):<button disabled={state.wallet<29} onClick={()=>onState(returnFromHoliday(state))}>{lang==='cs'?'Vrátit se domů (29 €)':'Zurück nach Hause (29 €)'}</button>}
  </div>}
  {state.place==='outfitter'&&<div className="life-object"><h4>🧥 {t.store}</h4>{gearItems.map(item=><div className="shop-item" key={item.id}><span>{item[lang]} · {item.price} €</span><button disabled={social.wardrobe.includes(item.id)||state.wallet<item.price} onClick={()=>onState(buyGear(state,item.id))}>{social.wardrobe.includes(item.id)?t.owned:t.buy}</button></div>)}</div>}
  {state.place==='mountains'&&<div className="life-object"><h4>⛰ {t.trip}</h4><button disabled={!social.wardrobe.includes('hiking')||!social.wardrobe.includes(gearFor(state.day))||state.life.energy<30} onClick={()=>onState(dayTrip(state))}>{t.hike}</button></div>}
@@ -52,7 +61,7 @@ export function SocialActivities({state,lang,onState}:Props){
  {state.place==='resort'&&<div className="life-object"><h4>⛰ {lang==='cs'?'Horské středisko':'Bergsportzentrum'}</h4>
  {seasonFor(state.day)===3?<button disabled={!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')||state.life.energy<25} onClick={()=>onState(sport(state,'ski'))}>🎿 {t.ski}</button>:<button disabled={(seasonFor(state.day)!==1&&seasonFor(state.day)!==2)||!social.wardrobe.includes('bike')||state.life.energy<25} onClick={()=>onState(sport(state,'downhill'))}>🚵 {t.downhill}</button>}
  </div>}
- {state.place==='hotel'&&<div className="life-object"><h4>✈ {t.holiday}</h4><button disabled={state.wallet<2000||social.lastHoliday===state.day} onClick={()=>onState(holiday(state))}>{t.travel}</button></div>}
+ {state.place==='hotel'&&<div className="life-object"><h4>🛏 {lang==='cs'?'Pobyt v hotelu':'Hotelaufenthalt'}</h4><p>{lang==='cs'?'V cizím městě můžeš odpočívat a objevovat okolí.':'In einer fremden Stadt kannst du ausruhen und die Umgebung entdecken.'}</p></div>}
  {state.place==='restaurant'&&<div className="life-object"><h4>🍲 {t.meal}</h4>
  <div className="restaurant-staff-actions">
  <button onClick={()=>onState(callRestaurantStaff(state,'chef'))} disabled={state.restaurantStory.chefCalled}>{lang==='cs'?'👨‍🍳 Požádat o kuchaře':'👨‍🍳 Koch rufen'}</button>

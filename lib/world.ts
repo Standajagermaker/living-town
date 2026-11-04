@@ -34,7 +34,7 @@ export type TownState={
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
  version:7,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
- discovered:['home','street','bakery','work'],recommended:[],known:[],selectedNpc:null,conversations:{},
+ discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85]
 };}
@@ -43,7 +43,7 @@ export function restoreTown(raw:unknown):TownState{
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
  if(v.version!==5&&v.version!==6&&v.version!==7)return freshState;
- return {...freshState,...v,version:7,life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal};
+ return {...freshState,...v,version:7,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
@@ -58,6 +58,10 @@ export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].include
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
  const next=addTime(s,6);return {...next,place:to,selectedNpc:null};
+}
+export function fastTravel(s:TownState,to:Place):TownState{
+ if(!s.discovered.includes(to)||!isVenueOpen(to,s.day))return s;
+ const n=addTime(s,12);return {...n,place:to,selectedNpc:null};
 }
 export function goRecommended(s:TownState,to:Place):TownState{
  if(!s.recommended.includes(to)||!s.discovered.includes(to)||!isVenueOpen(to,s.day))return go(s,to);

@@ -139,8 +139,11 @@ export function lookAround(s:TownState):TownState{
  const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop'];
  const available=hidden.filter(p=>!s.discovered.includes(p));
  const next=addTime(s,8);
- if(!available.length)return next;
- const place=available[(s.day*7+s.life.lookCount*3+s.minute)%available.length];
+ const count=s.life.lookCount+1;
+ const momentSeed=(s.day*5+s.life.lookCount*11+Math.floor(s.minute/30))%7;
+ // Only roughly one in four explorations unveils a new place; many are just little stories.
+ const discover=available.length>0&&(s.life.lookCount%4===2||((s.day+s.life.lookCount)%11===7));
+ const place=available.length?available[(s.day*7+s.life.lookCount*3+s.minute)%available.length]:null;
  const moments=[
  ['Na náměstí se honí pes za vlastním vodítkem. Jeho majitel předstírá, že to byl výcvik.','Auf dem Platz jagt ein Hund seiner eigenen Leine hinterher. Sein Besitzer behauptet, das sei Training.'],
  ['Cyklista se chlubí novou navigací. Ta ho právě potřetí poslala kolem stejné kašny.','Ein Radfahrer lobt sein neues Navi. Das schickt ihn gerade zum dritten Mal um denselben Brunnen.'],
@@ -148,8 +151,8 @@ export function lookAround(s:TownState):TownState{
  ['Z hotelu vyšel muž s kufrem a zjistil, že právě čeká na autobusové zastávce pro pěší.','Ein Mann verlässt das Hotel mit Koffer und merkt, dass er an einer Fußgängerzone auf den Bus wartet.'],
  ['V parku někdo cvičí jógu. Husy mají zjevně vlastní názor na jeho osobní prostor.','Im Park macht jemand Yoga. Die Gänse haben offenbar eine andere Vorstellung von persönlichem Abstand.']
  ];
- const [cs,de]=moments[(s.day*7+s.life.lookCount)%moments.length];
- return {...next,discovered:[...s.discovered,place],life:{...next.life,lookCount:s.life.lookCount+1,stories:[...next.life.stories,'look-'+s.day+'-'+s.life.lookCount]},
+ const [cs,de]=moments[momentSeed%moments.length];
+ return {...next,discovered:discover&&place?[...s.discovered,place]:s.discovered,life:{...next.life,lookCount:count,stories:[...next.life.stories,'look-'+s.day+'-'+s.life.lookCount]},
  journal:{cs:[...next.journal.cs,cs],de:[...next.journal.de,de]}};
 }
 export function phoneOpened(s:TownState):TownState{

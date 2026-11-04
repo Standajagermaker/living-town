@@ -321,7 +321,8 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
    resort:{cs:'Pracuju v lyžařském středisku.',de:'Ich arbeite in einem Skigebiet.'},
    bank:{cs:'Pracuju v bance.',de:'Ich arbeite in einer Bank.'},
    theatre:{cs:'Pracuju v divadle.',de:'Ich arbeite im Theater.'},
-   petshop:{cs:'Pracuju ve zverimexu.',de:'Ich arbeite in einer Tierhandlung.'}
+   petshop:{cs:'Pracuju ve zverimexu.',de:'Ich arbeite in einer Tierhandlung.'},
+   train:{cs:'Pracuju na vlakovém nádraží.',de:'Ich arbeite am Bahnhof.'}
   };
   const phrase=jobPhrases[r.job??'square'];
   return pair(phrase.cs+(r.sideJob?' Občas mám ještě druhou práci.':''),phrase.de+(r.sideJob?' Gelegentlich habe ich noch einen Nebenjob.':''));

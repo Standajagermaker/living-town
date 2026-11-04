@@ -55,9 +55,24 @@ export function eat(s:TownState):TownState{
  const next=addTime(s,15);
  return {...next,life:{...next.life,groceries:l.groceries-1,lastMeal:next.day*1440+next.minute,hunger:Math.max(0,next.life.hunger-38),energy:Math.min(100,next.life.energy+8)}};
 }
-export function groceries(s:TownState):TownState{
- if(s.place!=='market'||s.wallet<12)return s;
- const n=addTime(s,20);return {...n,wallet:s.wallet-12,walletHistory:[...s.walletHistory,s.wallet-12],life:{...n.life,groceries:n.life.groceries+5}};
+export const groceryCatalog=[
+ {id:'bread',cs:'Chléb a pečivo',de:'Brot und Gebäck',base:3.49,portions:2},
+ {id:'fruit',cs:'Ovoce a zelenina',de:'Obst und Gemüse',base:6.79,portions:3},
+ {id:'pasta',cs:'Těstoviny a omáčka',de:'Nudeln und Soße',base:4.85,portions:3},
+ {id:'eggs',cs:'Vejce a mléko',de:'Eier und Milch',base:5.19,portions:2},
+ {id:'meal',cs:'Suroviny na večeři',de:'Zutaten fürs Abendessen',base:9.39,portions:4},
+ {id:'big',cs:'Velký týdenní nákup',de:'Großer Wocheneinkauf',base:22.75,portions:9}
+];
+export function groceryOffers(day:number){
+ return groceryCatalog.map((item,i)=>({...item,price:Math.round((item.base+(((day*17+i*29+7)%111)-40)/100)*100)/100}));
+}
+export function groceries(s:TownState,id:string='bread'):TownState{
+ if(s.place!=='market')return s;
+ const offer=groceryOffers(s.day).find(x=>x.id===id);
+ if(!offer||s.wallet<offer.price)return s;
+ const n=addTime(s,15+offer.portions*3);
+ const balance=Math.round((s.wallet-offer.price)*100)/100;
+ return {...n,wallet:balance,walletHistory:[...s.walletHistory,balance],life:{...n.life,groceries:n.life.groceries+offer.portions}};
 }
 export function watchTv(s:TownState):TownState{
  if(s.place!=='home')return s;const n=addTime(s,40);

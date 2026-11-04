@@ -70,7 +70,7 @@ export function buyGear(s:TownState,id:string):TownState{
  return {...s,wallet:s.wallet-item.price,walletHistory:[...s.walletHistory,s.wallet-item.price],social:{...social,wardrobe:[...social.wardrobe,id]}};
 }
 export function dayTrip(s:TownState):TownState{
- const social=s.social??defaultSocial();if(s.place!=='mountains'||s.life.energy<30||!social.wardrobe.includes('hiking'))return s;
+ const social=s.social??defaultSocial();if(s.place!=='mountains'||s.life.energy<30||!social.wardrobe.includes('hiking')||!social.wardrobe.includes(gearFor(s.day)))return s;
  const n=addTime(s,180);
  return {...n,life:{...n.life,energy:Math.max(0,n.life.energy-25),hunger:Math.min(100,n.life.hunger+15)},social:{...social,tripCount:social.tripCount+1},journal:{cs:[...s.journal.cs,'Výlet v horách: turistka se ztratila i s papírovou mapou a nakonec se zeptala ovce na cestu.'],de:[...s.journal.de,'Ausflug in die Berge: Eine Wanderin verläuft sich trotz Papierkarte und fragt schließlich ein Schaf nach dem Weg.']}};
 }

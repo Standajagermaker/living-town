@@ -1,5 +1,5 @@
 import './globals.css';
 import './upgrade.css';
-import type { Metadata } from 'next';
-export const metadata:Metadata={title:'Living Town · Pilot 002',description:'Zweisprachiges soziales Stadtspiel / Dvoujazyčné živé městečko'};
+import type {Metadata} from 'next';
+export const metadata:Metadata={title:'Sonnenthal · Living Town v0.5.0',description:'Živé městečko / Lebendige Kleinstadt – social world simulation'};
 export default function RootLayout({children}:Readonly<{children:React.ReactNode}>){return <html lang="cs"><body>{children}</body></html>}

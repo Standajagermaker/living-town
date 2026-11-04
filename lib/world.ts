@@ -88,11 +88,22 @@ export function startConversation(s:TownState,id:string):TownState{
  pair('Ty jsi tu dlouho nebyl! Co se u tebe změnilo?','Du warst ja lange nicht hier! Was hat sich bei dir verändert?'):
  openerOptions[(Number(id.slice(-2))*7+s.day*11+prior.visits*3)%openerOptions.length]):first;
  const mood=moodOf(r,s.day,s.minute);
- const prompt=mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings;
+ const venue= s.place;
+ const placePrompt=venue==='bakery'?(
+    (s.minute%180<80)?pair('Pane, dnes máme fofr. Vyberte si prosím, co to bude?','Heute ist viel los! Bitte entscheiden Sie sich. Was darf es sein?'):
+    pair('Dobrý den, co to bude? Máme čerstvé preclíky a chléb.','Guten Tag! Was darf es sein? Wir haben frische Brezeln und Brot.')
+  ):venue==='work'?(
+    s.minute<12*60?pair('Dobré ráno, co máš dnes na stole za úkoly?','Guten Morgen, was steht heute bei dir an?'):
+    pair('Už jsi vyřídil dnešní úkoly?','Hast du deine Aufgaben für heute erledigt?')
+  ):venue==='library'?pair('Hledáte něco konkrétního ke čtení?','Suchen Sie etwas Bestimmtes zum Lesen?'):
+   venue==='cafe'?pair('Co si dáte? Kávu, nebo čaj?','Was darf es sein? Kaffee oder Tee?'):
+   venue==='bank'?pair('Přejete si poradit s účtem, nebo úvěrem?','Geht es um Ihr Konto oder einen Kredit?'):
+   venue==='gym'?pair('Jdete dnes cvičit?','Trainierst du heute?'):null;
+ const prompt=placePrompt??(mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings);
  const bond=s.social?.bonds[id];
  const away=!!currentAppointment(r,s.day,s.minute);
  const reluctant=(mood==='irritable'||mood==='stressed'||mood==='tired')&&(r.trait+s.day*7)%5<=2;
- const refuses=(bond?.warmth??0)<-12||(reluctant&&prior.visits===0);
+ const refuses=venue==='bakery'||venue==='work'||venue==='library'?false:(bond?.warmth??0)<-12||(reluctant&&prior.visits===0);
  const line=refuses
   ?pair(away?'Promiň, teď mám svoje plány. Rád si je nechám pro sebe. Měj se!':'Omlouvám se, dnes nemám chuť si povídat. Měj se!','Tut mir leid, ich habe gerade eigene Pläne und möchte sie für mich behalten. Bis dann!')
   :prompt;
@@ -150,7 +161,26 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  all.push(...unlocked);
  const unused=all.filter(c=>c.id==='contact'||!m.asked.includes(c.id));
  const hello=m.turns.length<=1?[{id:'new-here',topic:'hello' as Topic,cs:'Ano, právě jsem se přistěhoval.',de:'Ja, ich bin gerade hergezogen.'},{id:'hello-day',topic:'hello' as Topic,cs:'Zatím se rozkoukávám. A co ty?',de:'Ich schaue mich noch um. Und wie geht es Ihnen?'}]:[];
- const current=(actual?.length?[...actual,...unused]:[...hello,...context,...unused]).filter(c=>!m.asked.includes(c.id)).slice(0,4);
+ const npcQuestion=lastNpc&&/\?/.test(lastNpc[lang]);
+ const venueTopics:Answer[]=s.place==='work'?[
+ {id:'work-tasks',topic:'job',cs:'Mám připravené dnešní úkoly.',de:'Ich habe meine Aufgaben vorbereitet.'},
+ {id:'work-help',topic:'job',cs:'Potřeboval bych poradit s jedním úkolem.',de:'Ich brauche bei einer Aufgabe einen Rat.'},
+ {id:'work-break',topic:'followup',cs:'Jak řešíš pracovní přestávky?',de:'Wie machst du deine Arbeitspausen?'}
+ ]:s.place==='library'?[
+ {id:'lib-recommend',topic:'advice',cs:'Doporučil byste mi nějakou knihu?',de:'Könnten Sie mir ein Buch empfehlen?'},
+ {id:'lib-borrow',topic:'hobby',cs:'Chtěl bych si vypůjčit knihu.',de:'Ich möchte ein Buch ausleihen.'}
+ ]:s.place==='bakery'?[
+ {id:'bakery-pretzel-'+m.turns.length,topic:'followup',cs:'Jeden preclík, prosím.',de:'Eine Brezel, bitte.'},
+ {id:'bakery-bread-'+m.turns.length,topic:'followup',cs:'Máte čerstvý chleba?',de:'Haben Sie frisches Brot?'},
+ {id:'bakery-wait-'+m.turns.length,topic:'followup',cs:'Ještě si vybírám, hned to bude.',de:'Ich schaue noch kurz, gleich bin ich so weit.'}
+ ]:[];
+ // Answer the actual NPC question first; never append unrelated conversation openers to an unanswered question.
+ const candidates=npcQuestion?(actual?.length?actual:venueTopics.length?venueTopics:[
+ {id:'question-yes-'+m.turns.length,topic:'followup',cs:'Ano, to bych rád.',de:'Ja, das würde ich gerne.'},
+ {id:'question-no-'+m.turns.length,topic:'followup',cs:'Ne, tentokrát ne.',de:'Nein, dieses Mal nicht.'},
+ {id:'question-detail-'+m.turns.length,topic:'followup',cs:'Můžeš mi k tomu říct víc?',de:'Kannst du mir mehr dazu sagen?'}
+ ]):venueTopics.length?[...venueTopics,...unused]:[...hello,...context,...unused];
+ const current=candidates.filter(c=>!m.asked.includes(c.id)).slice(0,npcQuestion?3:4);
  if(!current.length)current.push({id:'more-'+m.turns,topic:'followup',cs:'Co je u tebe nového?',de:'Was gibt es Neues bei Ihnen?'});
  current.push({id:'bye',topic:'bye',cs:'Děkuji za rozhovor, měj se hezky.',de:'Danke für das Gespräch, bis bald.'});
  return current;

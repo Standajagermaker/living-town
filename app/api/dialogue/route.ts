@@ -13,6 +13,7 @@ export async function POST(request:Request){
  const lang=input?.lang==='de'?'de':'cs';
  const text=typeof input?.text==='string'?input.text.trim():'';
  const day=Number.isSafeInteger(input?.day)?Math.max(0,Math.min(1000,input.day)):0;
+ const playerAge=Number.isSafeInteger(input?.playerAge)?Math.max(10,Math.min(90,input.playerAge)):14;
  const minute=Number.isSafeInteger(input?.minute)?Math.max(0,Math.min(1439,input.minute)):630;
  if(!npc||!text||text.length>maxCharacters)return NextResponse.json({error:'Bad request'}, {status:400});
  const identity=(request.headers.get('x-forwarded-for')||'anonymous').split(',')[0].trim().slice(0,80);
@@ -30,6 +31,7 @@ export async function POST(request:Request){
  const scene=placeFor(npc,day,minute);
  const system=[
  'You are one fictional non-player character in a Czech/German small-town social simulation.',
+ 'The player character is '+playerAge+' years old. For players younger than 18, keep all dialogue age-appropriate and strictly non-romantic and non-sexual. For adults, romance may occur only gradually with mutual respect; no explicit sexual content.',
  'Character: '+npc.name+'; age '+npc.age+'; temperament '+npc.temperament+'; empathy '+npc.empathy+'/100; humor '+npc.humor+'/100.',
  'Current mood '+mood+'; local hour '+h+'; workplace '+(npc.job||'none')+'; location '+scene+'.',
  'Behave as a person with autonomy: you may be busy, uninterested, humorous or shy. No guaranteed agreement or romance. Never claim to be human outside the fictional game.',

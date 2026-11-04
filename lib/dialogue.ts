@@ -6,6 +6,10 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  const line=(last[lang]||last.cs||'').trim().toLowerCase();
  if(!/[?？][”"']?$/.test(line))return null;
  const options=(list:[string,string,string][])=>list.map(([id,cs,de])=>make(id+'-'+turn,cs,de));
+ if(/co to bude|co jste si vybral|was darf.s sein|was hätten sie gern|was darf ich ihnen geben/.test(line))return options([
+ ['bakery-pretzel','Jeden preclík, prosím.','Eine Brezel, bitte.'],
+ ['bakery-bread','Máte čerstvý chléb?','Haben Sie frisches Brot?'],
+ ['bakery-wait','Ještě si vybírám, hned to bude.','Ich schaue noch kurz, gleich bin ich so weit.']]);
  if(/co bys dělal ty|was würden sie tun|was würdest du tun/.test(line))return options([
  ['situation-facts','Nejdřív bych zjistil, co se skutečně stalo.','Zuerst würde ich herausfinden, was wirklich passiert ist.'],
  ['situation-talk','Zkusil bych si s tím člověkem promluvit.','Ich würde versuchen, mit der Person zu reden.'],
@@ -46,6 +50,9 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
 export function contextualResponse(id:string):Phrase|null{
  const prefix=id.replace(/-\d+$/,'');
  const lines:Record<string,Phrase>={
+ 'bakery-pretzel':{cs:'Prosím. Dva padesát. Chcete ještě něco?',de:'Bitte schön. Zwei fünfzig. Darf es noch etwas sein?'},
+ 'bakery-bread':{cs:'Ano, právě jsme dopekli žitný. Chcete celý bochník?',de:'Ja, das Roggenbrot ist frisch aus dem Ofen. Ein ganzes Brot?'},
+ 'bakery-wait':{cs:'Dobře, ale za vámi už čeká fronta.',de:'In Ordnung, aber hinter Ihnen warten schon Leute.'},
  'situation-facts':{cs:'To je rozumné. Bez faktů bychom si mohli jen domýšlet.',de:'Das klingt vernünftig. Ohne Fakten würden wir nur raten.'},
  'situation-talk':{cs:'Přímý rozhovor obvykle pomůže víc než dohady.','de':'Ein direktes Gespräch hilft oft mehr als Vermutungen.'},
  'situation-wait':{cs:'Rozvaha je fajn. Jen se v ní nesmí člověk schovat před rozhodnutím.',de:'Nachdenken ist gut. Man sollte sich nur nicht dahinter verstecken.'},

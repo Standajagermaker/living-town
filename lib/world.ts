@@ -245,7 +245,7 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  {id:'bakery-wait-'+m.turns.length,topic:'followup',cs:'Ještě si vybírám, hned to bude.',de:'Ich schaue noch kurz, gleich bin ich so weit.'}
  ]:[];
  // Answer the actual NPC question first; never append unrelated conversation openers to an unanswered question.
- const candidates=npcQuestion?(restaurantAnswers.length?restaurantAnswers:actual?.length?actual:venueTopics.length?venueTopics:[
+ const candidates:Answer[]=npcQuestion?(restaurantAnswers.length?restaurantAnswers:actual?.length?actual:venueTopics.length?venueTopics:[
  {id:'question-yes-'+m.turns.length,topic:'followup',cs:'Ano, to bych rád.',de:'Ja, das würde ich gerne.'},
  {id:'question-no-'+m.turns.length,topic:'followup',cs:'Ne, tentokrát ne.',de:'Nein, dieses Mal nicht.'},
  {id:'question-detail-'+m.turns.length,topic:'followup',cs:'Můžeš mi k tomu říct víc?',de:'Kannst du mir mehr dazu sagen?'}
@@ -361,7 +361,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const workRomance=choice?.id==='workplace-interest'?(r.temperament==='reserved'||privateMood?
  pair('Děkuju, ale na pracovišti si radši držím odstup. Neber to osobně.','Danke, aber am Arbeitsplatz halte ich lieber Abstand. Nimm es nicht persönlich.'):
  pair('Možná ano, ale pracovní vztahy bývají složité. Můžeme se nejdřív lépe poznat.','Vielleicht. Beziehungen bei der Arbeit können kompliziert sein. Lernen wir uns erst besser kennen.')):null;
- const contextualChoice=workRomance??(choice&&(venueReaction[choicePrefix]??livedReplies[choice.id]))||(choice?contextualResponse(choice.id):null);
+ const contextualChoice=workRomance??((choice&&(venueReaction[choicePrefix]??livedReplies[choice.id]))||(choice?contextualResponse(choice.id):null));
  const key=contextualChoice??(topic==='custom'?variants[stableHash(input+r.id+m.turns.length)%variants.length]:responses[topic]);
  const boss=id==='npc-02'&&s.place==='work'&&topic==='advice';
  const bossIrritable=(s.day*11+s.minute*3)%5<3;

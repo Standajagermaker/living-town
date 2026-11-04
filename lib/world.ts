@@ -255,11 +255,24 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  next=developBond(next,id,topic==='flirt'?'flirt':topic==='thanks'||topic==='hobby'||topic==='about'?'kind':'time');
  return next;
 }
+export const WORK_START=8*60;
+export const WORK_END=16*60+30;
+export function canWork(s:TownState):boolean{
+ return s.place==='work'&&s.employment!=='fired'&&s.day%7>=2&&s.lastShift!==s.day&&s.minute<WORK_END;
+}
 export function doShift(s:TownState):TownState{
- if(s.place!=='work'||s.employment==='fired'||s.day%7<2||s.lastShift===s.day)return s;
- if(s.life.energy<28||s.life.hunger>82)return s;
- const n=addTime(s,8*60);
- return {...n,wallet:s.wallet+45,lastShift:s.day,completed:[...new Set([...s.completed,'work'])],walletHistory:[...s.walletHistory,s.wallet+45]};
+ if(!canWork(s))return s;
+ const start=Math.max(s.minute,WORK_START);
+ const working=Math.max(0,WORK_END-start);
+ if(working<60)return s;
+ const lunch=Math.round((5.2+((s.day*17+11)%390)/100)*100)/100;
+ const isLate=start>WORK_START+15;
+ const gross=isLate?Math.round(45*(working/(WORK_END-WORK_START))*100)/100:45;
+ const n=addTime(s,WORK_END-s.minute);
+ const balance=Math.round((s.wallet+gross-lunch)*100)/100;
+ return {...n,wallet:balance,lastShift:s.day,completed:[...new Set([...s.completed,'work'])],
+ walletHistory:[...s.walletHistory,Math.round((s.wallet+gross)*100)/100,balance],
+ life:{...n.life,lastMeal:s.day*1440+12*60+30,hunger:Math.max(10,n.life.hunger-38),energy:Math.max(3,n.life.energy)}};
 }
 export function buy(s:TownState):TownState{
  if(s.place!=='bakery'||s.wallet<2.5)return s;

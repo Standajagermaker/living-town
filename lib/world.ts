@@ -206,7 +206,7 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  {id:'bakery-wait-'+m.turns.length,topic:'followup',cs:'Ještě si vybírám, hned to bude.',de:'Ich schaue noch kurz, gleich bin ich so weit.'}
  ]:[];
  // Answer the actual NPC question first; never append unrelated conversation openers to an unanswered question.
- const candidates=npcQuestion?(actual?.length?actual:venueTopics.length?venueTopics:[
+ const candidates=npcQuestion?(restaurantAnswers.length?restaurantAnswers:actual?.length?actual:venueTopics.length?venueTopics:[
  {id:'question-yes-'+m.turns.length,topic:'followup',cs:'Ano, to bych rád.',de:'Ja, das würde ich gerne.'},
  {id:'question-no-'+m.turns.length,topic:'followup',cs:'Ne, tentokrát ne.',de:'Nein, dieses Mal nicht.'},
  {id:'question-detail-'+m.turns.length,topic:'followup',cs:'Můžeš mi k tomu říct víc?',de:'Kannst du mir mehr dazu sagen?'}
@@ -314,7 +314,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  comprehensionGap?pair('Promiň, ztrácím se v tom. Co tím přesně myslíš?','Entschuldige, ich komme nicht ganz mit. Was meinst du damit?'):
  pair('Asi si teď úplně nerozumíme. Jak jsi to myslel?','Ich glaube, wir reden gerade aneinander vorbei. Wie meinst du das?');
  const contextual=misunderstood?friction:interpersonal??(boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
- const newText=repeated?contextual:mood==='tired'&&!misunderstood?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
+ const newText=repeated?contextual:mood==='tired'&&!misunderstood?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'&&!misunderstood?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);
  let next:TownState={...s,minute:s.minute+2,conversations:{...s.conversations,[id]:{...m,asked:[...seen],topic,repeat:repeated,turns:[...m.turns,{role:'player',cs:input,de:input,raw:input},npcTurn]}}};

@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
-import {byId,callRestaurantStaff} from '../lib/world';
+import {byId,callRestaurantStaff,fastTravel} from '../lib/world';
 import {sendText,payRent,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
 const dict={
@@ -25,7 +25,7 @@ export function SocialActivities({state,lang,onState}:Props){
  {state.place==='mountains'&&<div className="life-object"><h4>⛰ {t.trip}</h4><button disabled={!social.wardrobe.includes('hiking')||!social.wardrobe.includes(gearFor(state.day))||state.life.energy<30} onClick={()=>onState(dayTrip(state))}>{t.hike}</button></div>}
  {state.place==='park'&&<div className="life-object"><h4>🌳 {lang==='cs'?'Aktivity v parku':'Aktivitäten im Park'}</h4>
  {(['run','bike'] as const).map(kind=>{const required=kind==='run'?'running-shoes':'bike',owned=social.wardrobe.includes(required);return <div className="park-activity" key={kind}><span>{kind==='run'?'🏃':'🚲'} {kind==='run'?(lang==='cs'?'Běhání':'Joggen'):t.bike}</span>
- {owned?<button disabled={state.life.energy<25} onClick={()=>onState(sport(state,kind))}>{lang==='cs'?'Vyrazit':'Los geht’s'}</button>:<button onClick={()=>onState({...state,place:'outfitter',selectedNpc:null,minute:state.minute+12})}>{lang==='cs'?'Koupit vybavení':'Ausrüstung kaufen'} →</button>}</div>})}</div>}
+ {owned?<button disabled={state.life.energy<25} onClick={()=>onState(sport(state,kind))}>{lang==='cs'?'Vyrazit':'Los geht’s'}</button>:<button onClick={()=>onState(fastTravel({...state,discovered:[...new Set([...state.discovered,'outfitter' as const])]},'outfitter'))}>{lang==='cs'?'Koupit vybavení':'Ausrüstung kaufen'} →</button>}</div>})}</div>}
  {state.place==='pool'&&<div className="life-object"><h4>🏊 {lang==='cs'?'Venkovní plovárna':'Freibad'}</h4><button disabled={seasonFor(state.day)!==1||!social.wardrobe.includes('swimsuit')||state.life.energy<25} onClick={()=>onState(sport(state,'swim'))}>🏊 {t.swim}</button></div>}
  {state.place==='resort'&&<div className="life-object"><h4>⛰ {lang==='cs'?'Horské středisko':'Bergsportzentrum'}</h4>
  {seasonFor(state.day)===3?<button disabled={!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')||state.life.energy<25} onClick={()=>onState(sport(state,'ski'))}>🎿 {t.ski}</button>:<button disabled={(seasonFor(state.day)!==1&&seasonFor(state.day)!==2)||!social.wardrobe.includes('bike')||state.life.energy<25} onClick={()=>onState(sport(state,'downhill'))}>🚵 {t.downhill}</button>}

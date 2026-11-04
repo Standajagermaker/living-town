@@ -2,7 +2,7 @@
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
 import {byId,callRestaurantStaff,fastTravel} from '../lib/world';
-import {destinations,travelToCity,returnFromHoliday} from '../lib/trainTravel';
+import {destinations,travelToCity,returnFromHoliday,railConversationAvailable,railDelayMinutes,railwayConversation} from '../lib/trainTravel';
 import {sendText,payRent,payUtilities,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
 const dict={
@@ -30,6 +30,16 @@ export function SocialActivities({state,lang,onState}:Props){
  </div>}
  {state.place==='train'&&<div className="life-object railway-panel"><h4>🚉 {lang==='cs'?'Vlakové spojení':'Zugverbindungen'}</h4>
  <p>{lang==='cs'?'Dovolená':'Urlaub'}: {state.vacationDays} {lang==='cs'?'dní':'Tage'}</p>
+ {railConversationAvailable(state)&&<div className="rail-delay-story">
+ <p>⏱ {lang==='cs'?'Hlášení: vlak má zpoždění':'Durchsage: Der Zug hat Verspätung'} {railDelayMinutes(state)} min.</p>
+ <p>{lang==='cs'?'U tabule stojí několik cestujících. Jeden z nich nespokojeně zakroutí hlavou. Chceš se zapojit?':'Vor der Anzeigetafel stehen mehrere Reisende. Einer schüttelt verärgert den Kopf. Möchtest du etwas sagen?'}</p>
+ <div className="market-encounter-actions">
+ <button onClick={()=>onState(railwayConversation(state,'complain'))}>{lang==='cs'?'To snad není možné!':'Das kann doch nicht wahr sein!'}</button>
+ <button onClick={()=>onState(railwayConversation(state,'joke'))}>{lang==='cs'?'Ten vlak je asi legenda.':'Der Zug ist wohl eine Legende.'}</button>
+ <button onClick={()=>onState(railwayConversation(state,'ask'))}>{lang==='cs'?'Nevíte, kdy pojede?':'Wissen Sie, wann er fährt?'}</button>
+ <button onClick={()=>onState(railwayConversation(state,'quiet'))}>{lang==='cs'?'Raději mlčet':'Lieber schweigen'}</button>
+ </div></div>}
+ {state.railTalkDay===state.day&&state.railTalkOutcome&&<p className="market-followup">{state.railTalkOutcome[lang]}</p>}
  {!state.onHoliday?destinations.map(d=><div className="shop-item" key={d.id}><span><strong>{d[lang]}</strong> · {d.minutes} min<br/>{lang==='cs'?'Jízdenka':'Fahrkarte'} {d.ticket} € + {lang==='cs'?'hotel':'Hotel'} {d.hotel} € · 2 {lang==='cs'?'dny volna':'Urlaubstage'}</span>
  <button disabled={state.wallet<d.ticket+d.hotel||state.vacationDays<2} onClick={()=>onState(travelToCity(state,d.id))}>{lang==='cs'?'Odjet':'Abfahren'}</button></div>):<button disabled={state.wallet<29} onClick={()=>onState(returnFromHoliday(state))}>{lang==='cs'?'Vrátit se domů (29 €)':'Zurück nach Hause (29 €)'}</button>}
  </div>}

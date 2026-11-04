@@ -3,7 +3,7 @@ import {seasonFor} from './social';
 export const isVenueOpen=(place:Place,day:number)=>{
  const season=seasonFor(day);
  if(place==='pool')return season===1;
- if(place==='resort')return season===3||season===1||season===2;
+ if(place==='resort')return season===3;
  return true;
 };
 export type VenueStatus={open:boolean;cs:string;de:string};

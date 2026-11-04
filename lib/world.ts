@@ -190,10 +190,10 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  const social=s.social??defaultSocial();
  const bond=s.social?.bonds[id];
  if((bond?.warmth??0)>=12&&(bond?.trust??0)>=8&&!social.contacts.includes(id)&&s.day>=(bond?.cooldownUntil??-1))all.push({id:'contact',topic:'contact',cs:'Mohl bych si na tebe vzít kontakt?',de:'Dürfte ich deine Nummer haben?'});
- if(s.playerAge>=18&&(bond?.trust??0)>=10&&r.age>=18)all.push({id:'flirt',topic:'flirt',cs:'S tebou je docela příjemné povídání.',de:'Mit dir kann man sich wirklich angenehm unterhalten.'});
- if(s.playerAge>=18&&r.age>=18&&s.place==='work'&&(bond?.warmth??0)>=18&&(bond?.trust??0)>=16)
+ if(s.ageConfirmed&&s.playerAge>=18&&(bond?.trust??0)>=10&&r.age>=18)all.push({id:'flirt',topic:'flirt',cs:'S tebou je docela příjemné povídání.',de:'Mit dir kann man sich wirklich angenehm unterhalten.'});
+ if(s.ageConfirmed&&s.playerAge>=18&&r.age>=18&&s.place==='work'&&(bond?.warmth??0)>=18&&(bond?.trust??0)>=16)
   all.push({id:'workplace-interest',topic:'flirt',cs:'Nechtěl(a) bys někdy po práci zajít na kávu? Bez očekávání.',de:'Hättest du nach der Arbeit mal Lust auf einen Kaffee? Ganz ohne Erwartungen.'});
-  if(s.playerAge>=18&&r.age>=18&&(bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
+  if(s.ageConfirmed&&s.playerAge>=18&&r.age>=18&&(bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
  const lived=s.life.experiences??[];
  const unlocked:Answer[]=[];
  if(lived.includes('movies'))unlocked.push({id:'movies-chat',topic:'followup',cs:'Včera jsem koukal na zajímavý film. Co ráda sleduješ?',de:'Gestern habe ich einen interessanten Film gesehen. Was schaust du gern?'});
@@ -260,7 +260,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const id=s.selectedNpc;if(!id||!occupant(s).some(r=>r.id===id))return {...s,selectedNpc:null};
  const r=byId(id)!;const m=s.conversations[id]??fresh();if(!m.open)return s;
  const topic=choice?.topic??infer(input);
- if((topic==='flirt'||topic==='invite')&&(s.playerAge<18||r.age<18))return s;
+ if((topic==='flirt'||topic==='invite')&&(!s.ageConfirmed||s.playerAge<18||r.age<18))return s;
   if(topic==='bye')return exitConversation(s);
  const askedId=choice?.id??topic;
  const repeat=m.asked.includes(askedId);

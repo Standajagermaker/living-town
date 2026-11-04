@@ -16,22 +16,31 @@ export const catalog=[
  {id:'resilience',cs:'Klid při nesouhlasu',de:'Gelassen bleiben bei Widerspruch',csText:'Nemusíš vyhrát každou diskusi. Když jsou emoce silné, pomáhá shrnout pozici druhého a jasně sdělit vlastní hranice. To není souhlas, ale respekt.',deText:'Du musst nicht jede Diskussion gewinnen. Wenn Gefühle stark sind, hilft es, die Sicht des Gegenübers zusammenzufassen und eigene Grenzen ruhig zu benennen. Das ist nicht Zustimmung, sondern Respekt.',gain:10}
 ];
 export const eventsForDay=(day:number):TownEvent[]=>{
- const patterns=[
-  {cs:'Sportovní turnaj',de:'Sportturnier',emoji:'⚽',place:'park' as Place,start:10*60},
-  {cs:'Městské slavnosti',de:'Stadtfest',emoji:'🎆',place:'square' as Place,start:18*60},
-  {cs:'Narozeniny u sousedů',de:'Geburtstag bei Nachbarn',emoji:'🎂',place:'cafe' as Place,start:16*60},
-  {cs:'Farmářský trh',de:'Bauernmarkt',emoji:'🧺',place:'square' as Place,start:9*60},
-  {cs:'Setkání čtenářů',de:'Lesetreff',emoji:'📚',place:'library' as Place,start:15*60},
-  {cs:'Koncert pod širým nebem',de:'Open-Air-Konzert',emoji:'🎸',place:'park' as Place,start:19*60},
-  {cs:'Kvíz v kavárně',de:'Kneipenquiz im Café',emoji:'🧩',place:'cafe' as Place,start:17*60}
+ // 0 = Saturday, 1 = Sunday. Seasons advance every fourteen game days.
+ const dow=day%7,season=Math.floor(day/14)%4;
+ const schedule:{cs:string;de:string;emoji:string;place:Place;start:number;days:number[];seasons:number[]}[]=[
+  {cs:'Farmářský trh',de:'Bauernmarkt',emoji:'🧺',place:'square',start:9*60,days:[0],seasons:[0,1,2,3]},
+  {cs:'Nedělní koncert',de:'Sonntagskonzert',emoji:'🎻',place:'square',start:16*60,days:[1],seasons:[0,1,2,3]},
+  {cs:'Kvíz v kavárně',de:'Quiz im Café',emoji:'🧩',place:'cafe',start:19*60,days:[3],seasons:[0,1,2,3]},
+  {cs:'Večer společenských her',de:'Spieleabend',emoji:'🎲',place:'cafe',start:18*60,days:[5],seasons:[0,1,2,3]},
+  {cs:'Jarní dobrovolnická akce',de:'Frühlingsaktion',emoji:'🌱',place:'park',start:10*60,days:[0,1],seasons:[0]},
+  {cs:'Jarní běžecký závod',de:'Frühlingslauf',emoji:'🏃',place:'park',start:11*60,days:[0],seasons:[0]},
+  {cs:'Letní koupání',de:'Sommerbadetag',emoji:'🏊',place:'pool',start:11*60,days:[0,1],seasons:[1]},
+  {cs:'Downhill víkend',de:'Downhill-Wochenende',emoji:'🚵',place:'resort',start:10*60,days:[0,1],seasons:[1,2]},
+  {cs:'Letní slavnosti',de:'Sommerfest',emoji:'🎆',place:'square',start:18*60,days:[0],seasons:[1]},
+  {cs:'Podzimní slavnost',de:'Herbstfest',emoji:'🍁',place:'square',start:16*60,days:[0],seasons:[2]},
+  {cs:'Dýňový trh',de:'Kürbismarkt',emoji:'🎃',place:'square',start:10*60,days:[1],seasons:[2]},
+  {cs:'Lyžařský den',de:'Skitag',emoji:'🎿',place:'resort',start:9*60,days:[0,1],seasons:[3]},
+  {cs:'Zimní adventní trh',de:'Wintermarkt',emoji:'❄️',place:'square',start:16*60,days:[0,1],seasons:[3]},
+  {cs:'Večerní čtení',de:'Abendlesung',emoji:'📚',place:'library',start:17*60,days:[4],seasons:[0,1,2,3]}
  ];
- return [0,1,2].map((k)=>{
-  const x=patterns[(day*3+k*2)%patterns.length];
-  const id='ev-'+day+'-'+k;
-  const attendees=Array.from({length:5+(day+k)%5},(_,i)=>'npc-'+String(1+(day*9+k*7+i*6)%50).padStart(2,'0'));
-  return {id,day,start:x.start,end:x.start+100,place:x.place,cs:x.cs,de:x.de,emoji:x.emoji,attendees,
-   detailCs:'Někdo dorazí včas, někdo se omluví a někdo může překvapit nečekanou historkou.',
-   detailDe:'Manche sind pünktlich, andere sagen ab – und jemand hat vielleicht eine überraschende Geschichte.'};
+ const matching=schedule.filter(e=>e.days.includes(dow)&&e.seasons.includes(season));
+ return matching.map((e,i)=>{
+  const id='ev-'+day+'-'+i;
+  const attendees=Array.from({length:4+(day+i)%6},(_,n)=>'npc-'+String(1+(day*9+i*7+n*6)%50).padStart(2,'0'));
+  return {id,day,start:e.start,end:e.start+110,place:e.place,cs:e.cs,de:e.de,emoji:e.emoji,attendees,
+   detailCs:'Lidé se postupně scházejí. Někteří přijdou pozdě, jiní mohou překvapit.',
+   detailDe:'Die Leute treffen nach und nach ein. Manche kommen später, andere sorgen für Überraschungen.'};
  });
 };
 export function addTime(s:TownState,mins:number):TownState{
@@ -44,7 +53,7 @@ export function addTime(s:TownState,mins:number):TownState{
 export function eat(s:TownState):TownState{
  const l=s.life??initialLife();if(s.place!=='home'||l.groceries<=0)return s;
  const next=addTime(s,15);
- return {...next,life:{...next.life,groceries:l.groceries-1,hunger:Math.max(0,next.life.hunger-38),energy:Math.min(100,next.life.energy+8)}};
+ return {...next,life:{...next.life,groceries:l.groceries-1,lastMeal:next.day*1440+next.minute,hunger:Math.max(0,next.life.hunger-38),energy:Math.min(100,next.life.energy+8)}};
 }
 export function groceries(s:TownState):TownState{
  if(s.place!=='market'||s.wallet<12)return s;
@@ -108,7 +117,7 @@ export function attendEvent(s:TownState,event:TownEvent):TownState{
 }
 export function lookAround(s:TownState):TownState{
  if(s.place!=='street'&&s.place!=='square')return s;
- const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square','mountains','restaurant','outfitter'];
+ const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square','mountains','restaurant','outfitter','pool','resort'];
  const available=hidden.filter(p=>!s.discovered.includes(p));
  const next=addTime(s,8);
  if(!available.length)return next;

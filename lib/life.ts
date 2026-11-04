@@ -7,9 +7,9 @@ export type LifeState={
  energy:number;hunger:number;groceries:number;loans:{id:string;borrowedDay:number;readDay:number|null;dueDay:number}[];
  calendar:CalendarEntry[];readBooks:string[];lastMeal:number;lastBed:number;lookCount:number;
  phoneOpenedAt:number|null;phoneWarnings:number;workWarnings:number;lastBossEvent:number|null;
- stories:string[];visited:string[];lastPhoneCheck:number;
+ stories:string[];visited:string[];lastPhoneCheck:number;experiences:string[];lastScreenDay:number;
 };
-export const initialLife=():LifeState=>({energy:80,hunger:25,groceries:2,loans:[],calendar:[],readBooks:[],lastMeal:-1,lastBed:-1,lookCount:0,phoneOpenedAt:null,phoneWarnings:0,workWarnings:0,lastBossEvent:null,stories:[],visited:[],lastPhoneCheck:0});
+export const initialLife=():LifeState=>({energy:80,hunger:25,groceries:2,loans:[],calendar:[],readBooks:[],lastMeal:-1,lastBed:-1,lookCount:0,phoneOpenedAt:null,phoneWarnings:0,workWarnings:0,lastBossEvent:null,stories:[],visited:[],lastPhoneCheck:0,experiences:[],lastScreenDay:-1});
 export const catalog=[
  {id:'listening',cs:'O umění naslouchat',de:'Die Kunst des Zuhörens',csText:'Naslouchání znamená porozumět tomu, co druhý říká, a ověřit si, zda chce radu. Když se ptáš otevřeně a nepřerušuješ, zvyšuje se šance, že se dozvíš skutečný příběh.',deText:'Zuhören bedeutet verstehen, was das Gegenüber sagt, und klären, ob Rat erwünscht ist. Offene Fragen und Geduld helfen, die eigentliche Geschichte zu erfahren.',gain:12},
  {id:'reasoning',cs:'Proč se někdy mýlíme',de:'Warum wir uns manchmal irren',csText:'Mozek rád hledá důkazy pro to, čemu už věří. Zkus si položit otázku: Jaký důkaz by změnil můj názor? Přemýšlet znamená také umět změnit názor.',deText:'Unser Gehirn sucht gern Belege für bereits bestehende Ansichten. Frage dich: Welche Information würde meine Meinung ändern? Denken heißt auch, die eigene Sicht korrigieren zu können.',gain:14},
@@ -61,7 +61,11 @@ export function groceries(s:TownState):TownState{
 }
 export function watchTv(s:TownState):TownState{
  if(s.place!=='home')return s;const n=addTime(s,40);
- return {...n,life:{...n.life,energy:Math.min(100,n.life.energy+9),stories:[...n.life.stories,'tv-'+n.day]}};
+ return {...n,life:{...n.life,energy:Math.min(100,n.life.energy+6),stories:[...n.life.stories,'tv-'+n.day],experiences:[...new Set([...(n.life.experiences??[]),'news','movies'])],lastScreenDay:n.day}};
+}
+export function browseHome(s:TownState):TownState{
+ if(s.place!=='home')return s;const n=addTime(s,20);
+ return {...n,life:{...n.life,experiences:[...new Set([...(n.life.experiences??[]),'local-news','events','weather'])],lastScreenDay:n.day}};
 }
 export function rest(s:TownState):TownState{
  if(s.place!=='home')return s;
@@ -91,7 +95,7 @@ export function returnLoan(s:TownState,id:string):TownState{
  // Need at least one overnight sleep after reading before knowledge is consolidated.
  const learned=loan.readDay!==null&&s.life.lastBed>loan.readDay&&!s.life.readBooks.includes(id);
  const gain=learned?(b?.gain??10):0;
- const updated={...n,life:{...n.life,loans:n.life.loans.filter(b=>b.id!==id),readBooks:learned?[...n.life.readBooks,id]:n.life.readBooks}};
+ const updated={...n,life:{...n.life,loans:n.life.loans.filter(b=>b.id!==id),experiences:learned?[...new Set([...(n.life.experiences??[]),'books','learning'])]:n.life.experiences,readBooks:learned?[...n.life.readBooks,id]:n.life.readBooks}};
  return {...updated,mindset:updated.mindset+gain,completed:learned?[...new Set([...s.completed,'read'])]:s.completed};
 }
 export function registerEvent(s:TownState,event:TownEvent):TownState{

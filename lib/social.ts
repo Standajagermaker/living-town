@@ -75,17 +75,39 @@ export function collectReplies(s:TownState):TownState{
  return {...s,social:{...social,messages}};
 }
 export function payRent(s:TownState):TownState{
- const social=s.social??defaultSocial();if(s.wallet<210)return s;
- return {...s,wallet:s.wallet-210,walletHistory:[...s.walletHistory,s.wallet-210],social:{...social,housingPaidThrough:s.day+14,rentArrears:0}};
+ const social=s.social??defaultSocial();
+ if(s.housingStatus==='owned'||s.wallet<210||s.day<social.housingPaidThrough)return s;
+ const amount=210,balance=Math.round((s.wallet-amount)*100)/100;
+ return {...s,wallet:balance,walletHistory:[...s.walletHistory,balance],housingStatus:'rented',social:{...social,housingPaidThrough:(Math.floor(s.day/30)+1)*30,rentArrears:0}};
+}
+export function payUtilities(s:TownState):TownState{
+ if(s.utilitiesDue<=0||s.wallet<s.utilitiesDue)return s;
+ const balance=Math.round((s.wallet-s.utilitiesDue)*100)/100;
+ return {...s,wallet:balance,walletHistory:[...s.walletHistory,balance],utilitiesDue:0};
 }
 export function applyNewDay(s:TownState):TownState{
  const social=s.social??defaultSocial(),season=seasonFor(s.day);
- const arrears=s.day>social.housingPaidThrough&&s.day%14===0?social.rentArrears+1:social.rentArrears;
- let n={...s,pet:s.pet?petAtNewDay(s.pet,s.day):null,social:{...social,rentArrears:arrears}};
+ const month=Math.floor(s.day/30);
+ const newBilling=s.day>0&&s.day%30===0&&s.monthlyBilling!==month;
+ const rentDue=newBilling&&s.housingStatus!=='owned'&&s.day>=social.housingPaidThrough;
+ const arrears=rentDue?social.rentArrears+1:social.rentArrears;
+ const utilitiesDue=s.utilitiesDue+(newBilling?65:0);
+ let n:TownState={...s,stress:Math.min(100,Math.max(0,s.stress-3+(arrears?5:0)+(s.employment==='fired'?3:0))),
+ monthlyBilling:newBilling?month:s.monthlyBilling,utilitiesDue,
+ housingStatus:arrears>=2?'warning':s.housingStatus,
+ pet:s.pet?petAtNewDay(s.pet,s.day):null,social:{...social,rentArrears:arrears}};
+ if(newBilling){
+  const cs='Je první den měsíce. Přišly účty: '+(rentDue?'nájem 210 € a ':'')+'energie 65 €.';
+  const de='Der Erste des Monats. Rechnungen sind fällig: '+(rentDue?'Miete 210 € und ':'')+'Nebenkosten 65 €.';
+  n={...n,journal:{cs:[...n.journal.cs,cs],de:[...n.journal.de,de]}};
+ }
+ if(arrears>=2&&s.housingStatus!=='owned'&&s.housingStatus!=='temporary'){
+  n={...n,journal:{cs:[...n.journal.cs,'Pronajímatel poslal upomínku. Pokud nezaplatíš, můžeš přijít o bydlení.'],de:[...n.journal.de,'Der Vermieter hat gemahnt. Ohne Zahlung riskierst du die Wohnung.']}};
+ }
  if(season!==social.seasonAnnounced){
- const cs=['Do města dorazilo jaro.','Přišlo léto a město ožívá.','Začal podzim.','Napadl první sníh a začala zima.'][season];
- const de=['Der Frühling ist da.','Der Sommer bringt neues Leben.','Der Herbst ist gekommen.','Die ersten Schneeflocken kündigen den Winter an.'][season];
- n={...n,social:{...n.social,seasonAnnounced:season},journal:{cs:[...s.journal.cs,cs],de:[...s.journal.de,de]}};
+  const cs=['Do města dorazilo jaro.','Přišlo léto a město ožívá.','Začal podzim.','Napadl první sníh a začala zima.'][season];
+  const de=['Der Frühling ist da.','Der Sommer bringt neues Leben.','Der Herbst ist gekommen.','Die ersten Schneeflocken kündigen den Winter an.'][season];
+  n={...n,social:{...n.social,seasonAnnounced:season},journal:{cs:[...n.journal.cs,cs],de:[...n.journal.de,de]}};
  }
  return collectReplies(n);
 }

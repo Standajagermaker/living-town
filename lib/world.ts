@@ -49,7 +49,8 @@ export const occupant=(s:TownState)=>{
  const regular=residentsAt(s.place,s.day,s.minute);
  const event=eventsForDay(s.day).find(e=>e.place===s.place&&s.life.visited.includes(e.id));
  const attendees=event?event.attendees.map(byId).filter((r):r is Resident=>!!r):[];
- return [...new Map([...regular,...attendees].map(r=>[r.id,r])).values()];
+ const outings=s.place==='mountains'&&s.minute>=8*60&&s.minute<19*60?residents.filter(r=>(Number(r.id.slice(-2))+s.day)%7===0).slice(0,5):s.place==='restaurant'&&s.minute>=11*60&&s.minute<21*60?residents.filter(r=>(Number(r.id.slice(-2))+s.day)%9===0).slice(0,4):[];
+ return [...new Map([...regular,...attendees,...outings].map(r=>[r.id,r])).values()];
 };
 export const canGo=(s:TownState,to:Place)=>s.place===to||links[s.place].includes(to)&&s.discovered.includes(to);
 export function go(s:TownState,to:Place):TownState{

@@ -66,8 +66,8 @@ export function note(s:TownState,cs:string,de:string):TownState{return {...s,jou
 export function startConversation(s:TownState,id:string):TownState{
  if(!occupant(s).some(r=>r.id===id))return s;
  const r=byId(id)!; const prior=s.conversations[id]??fresh();if(prior.open)return {...s,selectedNpc:id};
- const greetings=prior.visits>0?pair('Zase se vidíme. Co je u tebe nového?','Wir sehen uns wieder! Was gibt es Neues bei Ihnen?'):
- pair('Ahoj, potřebuješ něco?','Hallo, kann ich Ihnen helfen?');
+ const greetings=prior.visits>0?pair('Zase se vidíme. Jak se ti v městečku zatím daří?','Wir sehen uns wieder! Wie gefällt es Ihnen bisher in der Stadt?'):
+ pair('Ahoj, ty jsi tu nový?','Hallo, sind Sie neu hier?');
  const mood=moodOf(r,s.day,s.minute);
  const prompt=mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings;
  const n={...s,selectedNpc:id,conversations:{...s.conversations,[id]:{...prior,open:true,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...prompt}]}}};
@@ -112,7 +112,8 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  if((bond?.trust??0)>=10&&r.age>=18)all.push({id:'flirt',topic:'flirt',cs:'S tebou je docela příjemné povídání.',de:'Mit dir kann man sich wirklich angenehm unterhalten.'});
  if((bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
  const unused=all.filter(c=>c.id==='contact'||!m.asked.includes(c.id));
- const current=[...context,...unused].slice(0,4);
+ const hello=m.turns<=1?[{id:'new-here',topic:'hello' as Topic,cs:'Ano, právě jsem se přistěhoval.',de:'Ja, ich bin gerade hergezogen.'},{id:'hello-day',topic:'hello' as Topic,cs:'Zatím se rozkoukávám. A co ty?',de:'Ich schaue mich noch um. Und wie geht es Ihnen?'}]:[];
+ const current=[...hello,...context,...unused].filter(c=>!m.asked.includes(c.id)).slice(0,4);
  if(!current.length)current.push({id:'more-'+m.turns,topic:'followup',cs:'Co je u tebe nového?',de:'Was gibt es Neues bei Ihnen?'});
  current.push({id:'bye',topic:'bye',cs:'Děkuji za rozhovor, měj se hezky.',de:'Danke für das Gespräch, bis bald.'});
  return current;
@@ -146,7 +147,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  contact:pair('Možná. Nejdřív se trochu poznejme.','Vielleicht. Lernen wir uns erst etwas besser kennen.'),
  flirt:pair('Děkuju. Uvidíme, jestli si budeme rozumět i příště.','Danke. Mal sehen, ob wir uns beim nächsten Mal auch so gut verstehen.'),
  invite:pair('Teď nevím. Dej mi prostor, rád se rozhodnu sám.','Ich weiß noch nicht. Gib mir bitte etwas Zeit, ich entscheide selbst.'),
- hello:pair('Ahoj. Rád tě poznávám.','Hallo. Freut mich, Sie kennenzulernen.'),
+ hello:pair('Vítej tady. Město je malé, ale občas překvapí víc než velkoměsto.','Willkommen! Die Stadt ist klein, überrascht aber manchmal mehr als eine Großstadt.'),
  name:pair('Jmenuji se '+r.name+'. A ty?','Ich heiße '+r.name+'. Und Sie?'),
  about:pair('V tomhle městě je pořád něco nového. Dnes mám ale vlastní plány.','In dieser Stadt ist immer etwas los. Heute habe ich allerdings eigene Pläne.'),
  job:pair('Pracuji hlavně v '+placeNames[r.job??'square'].cs.toLowerCase()+(r.sideJob?' a občas mám druhou práci.':'.'),'Ich arbeite meistens bei '+placeNames[r.job??'square'].de+(r.sideJob?' und habe gelegentlich einen Nebenjob.':'.')),

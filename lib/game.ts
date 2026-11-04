@@ -3,7 +3,7 @@ export type Place='home'|'street'|'bakery'|'square'|'work'|'library';
 export type NpcId='neighbor'|'baker'|'boss'|'librarian';
 export type Goal='neighbor'|'recommend'|'purchase'|'work'|'read'|'research';
 export type Topic='intro'|'name'|'dog'|'advice'|'product'|'purchase'|'job'|'books'|'website'|'followup'|'generic'|'thanks'|'bye';
-export type Message={who:'npc'|'player'|'system';text:string};
+export type Message={who:'npc'|'player'|'system';text:string;translations?:Partial<Record<Lang,string>>};
 export type Choice={id:string;text:string;topic:Topic};
 export type DialogueMemory={asked:string[];topic:Topic|null;turns:number;repeats:number;closed:boolean;history:Message[];customResponses:string[]};
 export type Recommendation={place:Place;from:NpcId};
@@ -12,7 +12,7 @@ export type GameState={
  discovered:Place[];recommendations:Recommendation[];knownNames:string[];
  conversations:Record<NpcId,DialogueMemory>;
  completedGoals:Goal[];journal:Record<Lang,string[]>;notifications:Record<Lang,string[]>;
- purchases:number;reads:number;researches:number;shiftsWorked:number;shiftsMissed:number;
+ purchases:number;reads:number;researches:number;lastStudyDay:Record<'read'|'research',number>;shiftsWorked:number;shiftsMissed:number;
  employment:'employed'|'warning'|'fired';dayLastWorked:number;
 };
 const blank=():DialogueMemory=>({asked:[],topic:null,turns:0,repeats:0,closed:true,history:[],customResponses:[]});
@@ -23,7 +23,7 @@ export const initialState:GameState={
  conversations:{neighbor:blank(),baker:blank(),boss:blank(),librarian:blank()},
  completedGoals:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  notifications:{cs:['Nový domov. Nová práce. Nové možnosti.'],de:['Neues Zuhause. Neuer Job. Neue Möglichkeiten.']},
- purchases:0,reads:0,researches:0,shiftsWorked:0,shiftsMissed:0,employment:'employed',dayLastWorked:-1
+ purchases:0,reads:0,researches:0,lastStudyDay:{read:-1,research:-1},shiftsWorked:0,shiftsMissed:0,employment:'employed',dayLastWorked:-1
 };
 const lines:Record<Lang,Record<string,string>>={
  cs:{
@@ -68,7 +68,7 @@ export function move(s:GameState,p:Place,lang:Lang):GameState{
 export function begin(s:GameState,lang:Lang):GameState{
  const npc=npcAt(s.place);if(!npc)return s;const m=memory(s,npc);
  if(!m.closed)return s;
- const newHistory=[...m.history,{who:'npc' as const,text:say(lang,'intro'+({neighbor:'Neighbor',baker:'Baker',boss:'Boss',librarian:'Librarian'}[npc]))}];
+ const opening='intro'+({neighbor:'Neighbor',baker:'Baker',boss:'Boss',librarian:'Librarian'}[npc]);const newHistory=[...m.history,{who:'npc' as const,text:say(lang,opening),translations:{cs:say('cs',opening),de:say('de',opening)}}];
  return {...s,conversations:{...s.conversations,[npc]:{...m,closed:false,history:newHistory}}};
 }
 const prompts:Record<Lang,Record<string,string>>={
@@ -123,20 +123,20 @@ export function interact(s:GameState,text:string,lang:Lang,choice?:Choice):GameS
  const topic=choice?.topic??infer(text,npc),id=choice?.id??topic;
  const repeated=topic!=='generic'&&topic!=='bye'&&topic!=='thanks'&&m.asked.some(k=>k===id||k===topic);
  const repeats=repeated?m.repeats+1:0;
- let response='',closed=false,wallet=started.wallet,mindset=started.mindset;
+ let response='',responseKey='',closed=false,wallet=started.wallet,mindset=started.mindset;
  let discovered=[...started.discovered],recommendations=[...started.recommendations],knownNames=[...started.knownNames];
  const goals=new Set(started.completedGoals);
  const journal={cs:[...started.journal.cs],de:[...started.journal.de]};
  const log=(cs:string,de:string)=>{journal.cs.push(cs);journal.de.push(de)};
- if(topic==='bye'){response=say(lang,'bye');closed=true;}
- else if(repeats>=3){response=say(lang,'repeated3');closed=true;}
- else if(repeated){response=say(lang,repeats===1?'repeated1':'repeated2');}
+ if(topic==='bye'){responseKey='bye';response=say(lang,responseKey);closed=true;}
+ else if(repeats>=3){responseKey='repeated3';response=say(lang,responseKey);closed=true;}
+ else if(repeated){responseKey=repeats===1?'repeated1':'repeated2';response=say(lang,responseKey);}
  else if(topic==='generic'){
   const variants=['unknown0','unknown1','unknown2','unknown3','unknown4'];
-  response=say(lang,variants[(hash(text)+m.turns)%variants.length]);
+  responseKey=variants[(hash(text)+m.turns)%variants.length];response=say(lang,responseKey);
  }else {
   const key=topic==='name'?'name':topic==='dog'?'dog':topic==='advice'?'advice':topic==='product'?'product':topic==='purchase'?'purchase':topic==='job'?'job':topic==='books'?'books':topic==='website'?'website':topic==='thanks'?'thanks':'followup';
-  response=say(lang,key);
+  responseKey=key;response=say(lang,key);
   if(topic==='name'||topic==='dog'){
    if(!knownNames.includes('Herr Weber')&&npc==='neighbor'){knownNames.push('Herr Weber');goals.add('neighbor');log('Zjistil jsi sousedovo jméno.','Du kennst jetzt den Namen des Nachbarn.');}
   }
@@ -150,22 +150,22 @@ export function interact(s:GameState,text:string,lang:Lang,choice?:Choice):GameS
   }
   if(topic==='purchase'&&npc==='baker'){
    if(wallet>=2.5){wallet-=2.5;goals.add('purchase');log('Koupil sis preclík za 2,50 €.','Du hast eine Brezel für 2,50 € gekauft.');}
-   else response=say(lang,'noMoney');
+   else {responseKey='noMoney';response=say(lang,responseKey);}
   }
  }
  const asked=topic==='generic'||topic==='bye'||topic==='thanks'||repeated?m.asked:[...m.asked,id];
- const mem:DialogueMemory={...m,asked,topic,turns:m.turns+1,repeats,closed,history:[...m.history,{who:'player',text},{who:'npc',text:response}]};
+ const mem:DialogueMemory={...m,asked,topic,turns:m.turns+1,repeats,closed,history:[...m.history,{who:'player',text},{who:'npc',text:response,translations:{cs:say('cs',responseKey),de:say('de',responseKey)}}]};
  return {...started,minute:started.minute+2,wallet,mindset,discovered,recommendations,knownNames,completedGoals:[...goals],journal,conversations:{...started.conversations,[npc]:mem}};
 }
 export function study(s:GameState,kind:'read'|'research',lang:Lang):GameState{
- if(s.place!=='library')return s;
+ if(s.place!=='library'||s.lastStudyDay?.[kind]===s.day)return s;
  const g=new Set(s.completedGoals),journal={cs:[...s.journal.cs],de:[...s.journal.de]};
  const add=kind==='read'?3:2;
  g.add(kind==='read'?'read':'research');
  journal.cs.push(kind==='read'?'Četl jsi v knihovně. Mindset +3.':'Přečetl sis užitečný webový článek. Mindset +2.');
  journal.de.push(kind==='read'?'Du hast in der Bibliothek gelesen. Mindset +3.':'Du hast einen informativen Online-Artikel gelesen. Mindset +2.');
  return {...s,mindset:Math.min(100,s.mindset+add),minute:s.minute+30,
- reads:s.reads+(kind==='read'?1:0),researches:s.researches+(kind==='research'?1:0),completedGoals:[...g],journal};
+ reads:s.reads+(kind==='read'?1:0),researches:s.researches+(kind==='research'?1:0),lastStudyDay:{...s.lastStudyDay,[kind]:s.day},completedGoals:[...g],journal};
 }
 export function workShift(s:GameState):GameState{
  if(s.place!=='work'||s.employment==='fired'||s.day<2||s.day>6||s.dayLastWorked===s.day)return s;

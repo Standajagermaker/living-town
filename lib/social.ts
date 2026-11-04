@@ -2,6 +2,7 @@ import type {TownState,Lang} from './world';
 import {addTime} from './life';
 import {byId,moodOf} from './residents';
 import type {Place} from './game';
+import {foodTrouble} from './restaurantStory';
 export type Bond={warmth:number;trust:number;lastContact:number;invited:boolean;requested:boolean;cooldownUntil:number};
 export type PhoneMessage={id:string;residentId:string;sentDay:number;sentMinute:number;dueDay:number;dueMinute:number;body:string;replyCs:string;replyDe:string;delivered:boolean};
 export type SocialState={bonds:Record<string,Bond>;contacts:string[];messages:PhoneMessage[];housingPaidThrough:number;rentArrears:number;wardrobe:string[];seasonAnnounced:number;lastHoliday:number;tripCount:number};
@@ -94,7 +95,12 @@ export function restaurantMeal(s:TownState,guestId?:string):TownState{
  const n=addTime(s,45);
  const social=guest?{...n.social,bonds:{...n.social.bonds,[guest]:{...getBond(n,guest),warmth:Math.min(100,getBond(n,guest).warmth+4),trust:Math.min(100,getBond(n,guest).trust+2)}}}:n.social;
  return {...n,wallet:Math.round((s.wallet-price)*100)/100,walletHistory:[...s.walletHistory,Math.round((s.wallet-price)*100)/100],
- life:{...n.life,lastMeal:n.day*1440+n.minute,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)},social};
+ life:{...n.life,lastMeal:n.day*1440+n.minute,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)},social,
+ restaurantStory:{...s.restaurantStory,mealComplaint:foodTrouble(s.day,s.minute),mealDay:s.day,chefCalled:false,ownerCalled:false},
+ journal:foodTrouble(s.day,s.minute)?{
+ cs:[...s.journal.cs,'Večeře dnes chutnala nezvykle slaně. Z kuchyně se ozval povzdech.'],
+ de:[...s.journal.de,'Das Abendessen schmeckte heute ungewöhnlich salzig. Aus der Küche kam ein Seufzer.']
+ }:s.journal};
 }
 export function theatreTicket(s:TownState):TownState{
  if(s.place!=='street'&&s.place!=='square'&&s.place!=='theatre')return s;

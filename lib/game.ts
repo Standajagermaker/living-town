@@ -1,5 +1,5 @@
 export type Lang='cs'|'de';
-export type Place='home'|'street'|'bakery'|'square'|'work'|'library';
+export type Place='home'|'street'|'bakery'|'square'|'work'|'library'|'market'|'cafe'|'park'|'church'|'hotel'|'gym';
 export type NpcId='neighbor'|'baker'|'boss'|'librarian';
 export type Goal='neighbor'|'recommend'|'purchase'|'work'|'read'|'research';
 export type Topic='intro'|'name'|'dog'|'advice'|'product'|'purchase'|'job'|'books'|'website'|'followup'|'generic'|'thanks'|'bye';

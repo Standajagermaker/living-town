@@ -6,6 +6,10 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  const line=(last[lang]||last.cs||'').trim().toLowerCase();
  if(!/[?？][”"']?$/.test(line))return null;
  const options=(list:[string,string,string][])=>list.map(([id,cs,de])=>make(id+'-'+turn,cs,de));
+ if(/to byl vtip|jak jsi to myslel|das war ein witz|wie meinst du das|co tím myslíš|was meinst du damit/.test(line))return options([
+ ['misunderstand-explain','Promiň, byl to jen pokus o vtip.','Entschuldige, das war nur ein Scherz.'],
+ ['misunderstand-clarify','Myslel jsem to jinak. Zkusím to vysvětlit jednodušeji.','Ich meinte es anders. Ich versuche es einfacher zu erklären.'],
+ ['misunderstand-accept','Asi máme jiný smysl pro humor, a to je v pořádku.','Wir haben wohl einen anderen Humor, das ist völlig okay.']]);
  if(/co to bude|co jste si vybral|was darf.s sein|was hätten sie gern|was darf ich ihnen geben/.test(line))return options([
  ['bakery-pretzel','Jeden preclík, prosím.','Eine Brezel, bitte.'],
  ['bakery-bread','Máte čerstvý chléb?','Haben Sie frisches Brot?'],
@@ -90,6 +94,9 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
 export function contextualResponse(id:string):Phrase|null{
  const prefix=id.replace(/-\d+$/,'');
  const lines:Record<string,Phrase>={
+ 'misunderstand-explain':{cs:'Aha, už chápu. Promiň, humor mi dnes nějak nedochází.',de:'Ach so, verstehe. Entschuldige, heute bin ich wohl nicht in Witzlaune.'},
+ 'misunderstand-clarify':{cs:'Teď je to jasnější. Dík, že jsi to upřesnil.',de:'Jetzt verstehe ich es besser. Danke für die Erklärung.'},
+ 'misunderstand-accept':{cs:'To je fér. Aspoň se nemusíme smát všemu stejně.',de:'Das ist fair. Wir müssen nicht über dieselben Dinge lachen.'},
  'bakery-pretzel':{cs:'Prosím. Dva padesát. Chcete ještě něco?',de:'Bitte schön. Zwei fünfzig. Darf es noch etwas sein?'},
  'bakery-bread':{cs:'Ano, právě jsme dopekli žitný. Chcete celý bochník?',de:'Ja, das Roggenbrot ist frisch aus dem Ofen. Ein ganzes Brot?'},
  'bakery-wait':{cs:'Dobře, ale za vámi už čeká fronta.',de:'In Ordnung, aber hinter Ihnen warten schon Leute.'},

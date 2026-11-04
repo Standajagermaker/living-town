@@ -47,7 +47,7 @@ export function currentAppointment(r:Resident,day:number,minute:number){
 export const residents:Resident[]=first.map((name,i)=>({
  id:'npc-'+String(i+1).padStart(2,'0'),name:name+' '+last[(i*7+3)%last.length],age:19+(i*13)%52,
  temperament:types[(i*5+Math.floor(i/7))%types.length],trait:(i*37+19)%100,humor:(i*17+43)%100,empathy:(i*29+67)%100,
- job:(['bakery','work','library','square','work','bakery','work','square','library','work'] as Place[])[i%10],
+ job:([46,47,49].includes(i)?'restaurant':(['bakery','work','library','square','work','bakery','work','square','library','work'] as Place[])[i%10]),
  sideJob:i%5===0?'bakery':i%7===0?'library':i%9===0?'square':null,
  homeDistrict:i%6,vacationStart:(i*11+24)%85,vacationLength:3+i%9,
  weekendWorker:i%3===0||i%5===0,officeRole:i===4?'boss':i===6?'overtime':i===9?'remote':i%10===4||i%10===6||i%10===9?'staff':undefined,interests:residentInterests(i),portrait:['🧑','👩','👨','👩‍🦰','🧔','👱‍♀️','👨‍🦳','👩‍🦳','🧑‍🦱','👨‍🦰'][i%10]
@@ -67,6 +67,8 @@ export function moodOf(r:Resident,day:number,minute:number):ResidentMood{
 export function placeFor(r:Resident,day:number,minute:number):Place{
  const hour=Math.floor((minute%1440)/60),dow=day%7;
  const vacation=day%90>=r.vacationStart&&day%90<r.vacationStart+r.vacationLength;
+ // The waitress is on duty whenever the restaurant is open; other staff are backstage unless called.
+ if(r.id==='npc-47'&&minute>=11*60&&minute<22*60)return 'restaurant';
  const officeRole=r.job==='work'?r.officeRole:undefined;
  // Office is a weekday workplace. Nobody gets an automatic weekend shift.
  // Boss occasionally checks in on Saturdays, and the IT enthusiast often stays late.
@@ -80,7 +82,7 @@ export function placeFor(r:Resident,day:number,minute:number):Place{
  }else if(officeRole==='staff'&&!vacation){
   if(dow>=2&&dow<=6&&minute>=8*60&&minute<16*60+30)return 'work';
  }
- const shift=vacation?null:r.job==='work'?null:(r.sideJob&&dow===6?r.sideJob:(dow>=2&&dow<=6||r.weekendWorker)?r.job:null);
+ const shift=vacation?null:r.job==='work'||r.id==='npc-48'||r.id==='npc-50'?null:(r.sideJob&&dow===6?r.sideJob:(dow>=2&&dow<=6||r.weekendWorker)?r.job:null);
  if(shift&&hour>=8+(r.age%3)&&hour<15+(r.age%5))return shift;
  const interest=currentAppointment(r,day,minute);
  if(interest)return interest.place;

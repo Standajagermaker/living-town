@@ -12,7 +12,7 @@ export type GameState={
  discovered:Place[];recommendations:Recommendation[];knownNames:string[];
  conversations:Record<NpcId,DialogueMemory>;
  completedGoals:Goal[];journal:Record<Lang,string[]>;notifications:Record<Lang,string[]>;
- purchases:number;reads:number;researches:number;lastStudyDay:Record<'read'|'research',number>;shiftsWorked:number;shiftsMissed:number;
+ purchases:number;reads:number;researches:number;lastStudyDay:Record<'read'|'research',number>;shiftsWorked:number;shiftsMissed:number;workStrikes:number;
  employment:'employed'|'warning'|'fired';dayLastWorked:number;
 };
 const blank=():DialogueMemory=>({asked:[],topic:null,turns:0,repeats:0,closed:true,history:[],customResponses:[]});
@@ -23,7 +23,7 @@ export const initialState:GameState={
  conversations:{neighbor:blank(),baker:blank(),boss:blank(),librarian:blank()},
  completedGoals:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  notifications:{cs:['Nový domov. Nová práce. Nové možnosti.'],de:['Neues Zuhause. Neuer Job. Neue Möglichkeiten.']},
- purchases:0,reads:0,researches:0,lastStudyDay:{read:-1,research:-1},shiftsWorked:0,shiftsMissed:0,employment:'employed',dayLastWorked:-1
+ purchases:0,reads:0,researches:0,lastStudyDay:{read:-1,research:-1},shiftsWorked:0,shiftsMissed:0,workStrikes:0,employment:'employed',dayLastWorked:-1
 };
 const lines:Record<Lang,Record<string,string>>={
  cs:{
@@ -37,7 +37,7 @@ const lines:Record<Lang,Record<string,string>>={
  read:'Přečetl sis krátký text. Mindset se zvýšil o 3.',research:'Prošel sis článek na městském informačním terminálu. Mindset +2.',
  workWarning:'V práci se ptají, proč jsi nepřišel. Ještě jedna absence může mít následky.',
  fired:'Zaměstnavatel s tebou kvůli opakovaným absencím ukončil pracovní poměr.',
- nextDay:'Začal nový den.',closed:'Rozhovor je ukončený. Příště můžete navázat tam, kde jste skončili.'
+ bossWarning:'Takový tón na pracovišti nepatří. Zkusme se bavit věcně.',bossFired:'To už je potřetí. S takovým jednáním nemůžeme pokračovat. Pracovní poměr končí.',welcomeBack:'Rád tě zase vidím. Kde jsme to posledně skončili?',nextDay:'Začal nový den.',closed:'Rozhovor je ukončený. Příště můžete navázat tam, kde jste skončili.'
  },
  de:{
  introNeighbor:'Willkommen in der Nachbarschaft! Sind Sie von weit her zugezogen?',introBaker:'Willkommen in der Bäckerei! Was darf es sein?',introBoss:'Sie sind also unser neuer Kollege. Schaffen Sie heute Ihre Schicht?',introLibrarian:'Willkommen in der Bibliothek. Suchen Sie etwas Bestimmtes?',
@@ -50,7 +50,7 @@ const lines:Record<Lang,Record<string,string>>={
  read:'Sie haben einen kurzen Text gelesen. Mindset +3.',research:'Sie haben einen Artikel am städtischen Infoterminal gelesen. Mindset +2.',
  workWarning:'Im Betrieb fragt man sich, warum Sie nicht erschienen sind. Weitere Fehlzeiten können Folgen haben.',
  fired:'Nach wiederholtem unentschuldigtem Fehlen hat der Betrieb das Arbeitsverhältnis beendet.',
- nextDay:'Ein neuer Tag beginnt.',closed:'Das Gespräch ist beendet. Beim nächsten Treffen können Sie daran anknüpfen.'
+ bossWarning:'So sprechen wir hier nicht miteinander. Lassen Sie uns sachlich bleiben.',bossFired:'Das ist nun schon das dritte Mal. So können wir nicht weiterarbeiten. Das Arbeitsverhältnis endet.',welcomeBack:'Schön, Sie wiederzusehen. Wo waren wir zuletzt stehen geblieben?',nextDay:'Ein neuer Tag beginnt.',closed:'Das Gespräch ist beendet. Beim nächsten Treffen können Sie daran anknüpfen.'
  }
 };
 export const say=(lang:Lang,key:string)=>lines[lang][key]??key;
@@ -69,7 +69,7 @@ export function move(s:GameState,p:Place,lang:Lang):GameState{
 export function begin(s:GameState,lang:Lang):GameState{
  const npc=npcAt(s.place);if(!npc)return s;const m=memory(s,npc);
  if(!m.closed)return s;
- const opening='intro'+({neighbor:'Neighbor',baker:'Baker',boss:'Boss',librarian:'Librarian'}[npc]);const newHistory=[...m.history,{who:'npc' as const,text:say(lang,opening),translations:{cs:say('cs',opening),de:say('de',opening)}}];
+ const opening=m.turns>0?'welcomeBack':'intro'+({neighbor:'Neighbor',baker:'Baker',boss:'Boss',librarian:'Librarian'}[npc]);const newHistory=[...m.history,{who:'npc' as const,text:say(lang,opening),translations:{cs:say('cs',opening),de:say('de',opening)}}];
  return {...s,conversations:{...s.conversations,[npc]:{...m,closed:false,history:newHistory}}};
 }
 const prompts:Record<Lang,Record<string,string>>={
@@ -126,12 +126,13 @@ export function interact(s:GameState,text:string,lang:Lang,choice?:Choice):GameS
  const topic=choice?.topic??infer(text,npc),id=choice?.id??topic;
  const repeated=topic!=='generic'&&topic!=='bye'&&topic!=='thanks'&&m.asked.some(k=>k===id||k===topic);
  const repeats=repeated?m.repeats+1:0;
- let response='',responseKey='',closed=false,wallet=started.wallet,mindset=started.mindset;
+ let response='',responseKey='',closed=false,wallet=started.wallet,mindset=started.mindset;let workStrikes=started.workStrikes??0;let employment=started.employment;
  let discovered=[...started.discovered],recommendations=[...started.recommendations],knownNames=[...started.knownNames];
  const goals=new Set(started.completedGoals);
  const journal={cs:[...started.journal.cs],de:[...started.journal.de]};
  const log=(cs:string,de:string)=>{journal.cs.push(cs);journal.de.push(de)};
- if(topic==='bye'){responseKey='bye';response=say(lang,responseKey);closed=true;}
+ if(npc==='boss'&&/(arschloch|idiot|halt die klappe|blödmann|debil|blbec|drž hubu|hlupák)/i.test(text)){workStrikes++;responseKey=workStrikes>=3?'bossFired':'bossWarning';response=say(lang,responseKey);if(workStrikes>=3){employment='fired';closed=true;}}
+ else if(topic==='bye'){responseKey='bye';response=say(lang,responseKey);closed=true;}
  else if(repeats>=3){responseKey='repeated3';response=say(lang,responseKey);closed=true;}
  else if(repeated){responseKey=repeats===1?'repeated1':'repeated2';response=say(lang,responseKey);}
  else if(topic==='generic'){
@@ -158,7 +159,7 @@ export function interact(s:GameState,text:string,lang:Lang,choice?:Choice):GameS
  }
  const asked=topic==='generic'||topic==='bye'||topic==='thanks'||repeated?m.asked:[...m.asked,id];
  const mem:DialogueMemory={...m,asked,topic:topic==='bye'?m.topic:topic,turns:m.turns+1,repeats,closed,history:[...m.history,{who:'player',text},{who:'npc',text:response,translations:{cs:say('cs',responseKey),de:say('de',responseKey)}}]};
- return {...started,minute:started.minute+2,wallet,mindset,discovered,recommendations,knownNames,completedGoals:[...goals],journal,conversations:{...started.conversations,[npc]:mem}};
+ return {...started,minute:started.minute+2,wallet,mindset,workStrikes,employment,discovered,recommendations,knownNames,completedGoals:[...goals],journal,conversations:{...started.conversations,[npc]:mem}};
 }
 export function study(s:GameState,kind:'read'|'research',lang:Lang):GameState{
  if(s.place!=='library'||s.lastStudyDay?.[kind]===s.day)return s;

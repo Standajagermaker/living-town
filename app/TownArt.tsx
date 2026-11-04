@@ -26,8 +26,8 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
 export function StreetView({place,lang,season,hour=12,homeFocus='room'}:{place:Place;lang:Lang;season:number;hour?:number;homeFocus?:'room'|'tv'|'phone'}){
  const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work',theatre:'theatre'};
  const asset=named[place]??null;
- const [format,setFormat]=useState<'webp'|'svg'>('svg');
- useEffect(()=>setFormat('svg'),[place]);
+ const [format,setFormat]=useState<'webp'|'svg'>('webp');
+ useEffect(()=>setFormat('webp'),[place]);
  if(place==='home'&&homeFocus!=='room')return <div className={'home-focused-scene '+(homeFocus==='tv'?'focus-tv':'focus-phone')}>
   {homeFocus==='tv'?<div className="living-television"><div className="tv-image"><div className="tv-mountain">⛰️</div><div className="tv-caption">{lang==='cs'?'ZPRÁVY Z MĚSTA':'STADTNACHRICHTEN'}</div><div className="tv-headline">{lang==='cs'?'Dnes ve městě':'Heute in der Stadt'}</div></div><div className="tv-stand"/></div>:<div className="living-phone"><div className="phone-top">{String(hour).padStart(2,'0')}:00 · ●●●</div><div className="phone-content"><div>☁️ {lang==='cs'?'Počasí a zprávy':'Wetter & Nachrichten'}</div><div>💬 {lang==='cs'?'Kontakty':'Kontakte'}</div><div>📆 {lang==='cs'?'Můj kalendář':'Mein Kalender'}</div><div>📍 Living Town</div></div><div className="phone-bottom"/></div>}
   <div className="perspective-label">{homeFocus==='tv'?'📺':'📱'} {lang==='cs'?(homeFocus==='tv'?'Televize':'Telefon'):(homeFocus==='tv'?'Fernseher':'Handy')}</div></div>;

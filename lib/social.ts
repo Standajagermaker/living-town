@@ -3,6 +3,7 @@ import {addTime} from './life';
 import {byId,moodOf} from './residents';
 import type {Place} from './game';
 import {foodTrouble} from './restaurantStory';
+import {petAtNewDay} from './pets';
 export type Bond={warmth:number;trust:number;lastContact:number;invited:boolean;requested:boolean;cooldownUntil:number};
 export type PhoneMessage={id:string;residentId:string;sentDay:number;sentMinute:number;dueDay:number;dueMinute:number;body:string;replyCs:string;replyDe:string;delivered:boolean};
 export type SocialState={bonds:Record<string,Bond>;contacts:string[];messages:PhoneMessage[];housingPaidThrough:number;rentArrears:number;wardrobe:string[];seasonAnnounced:number;lastHoliday:number;tripCount:number};
@@ -80,7 +81,7 @@ export function payRent(s:TownState):TownState{
 export function applyNewDay(s:TownState):TownState{
  const social=s.social??defaultSocial(),season=seasonFor(s.day);
  const arrears=s.day>social.housingPaidThrough&&s.day%14===0?social.rentArrears+1:social.rentArrears;
- let n={...s,social:{...social,rentArrears:arrears}};
+ let n={...s,pet:s.pet?petAtNewDay(s.pet,s.day):null,social:{...social,rentArrears:arrears}};
  if(season!==social.seasonAnnounced){
  const cs=['Do města dorazilo jaro.','Přišlo léto a město ožívá.','Začal podzim.','Napadl první sníh a začala zima.'][season];
  const de=['Der Frühling ist da.','Der Sommer bringt neues Leben.','Der Herbst ist gekommen.','Die ersten Schneeflocken kündigen den Winter an.'][season];

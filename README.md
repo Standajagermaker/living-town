@@ -1,34 +1,51 @@
-# Living Town – Pilot 004
+# Sonnenthal – Living Town v0.5.0
 
-Interaktivní prototyp společenského městečka v **češtině a němčině**, vytvořený v Next.js. Stav se ukládá lokálně v prohlížeči (localStorage). AI dialogy, společný serverový svět a multiplayer **zatím nejsou připojeny**.
+Živé městečko / Lebendige Kleinstadt
 
-## Co lze hrát
+## Změny v0.5.0
 
-- Začínáš doma; od začátku máš známé zaměstnání. Před domem je ulice, soused se psem a pekárna.
-- Horní navigace je stále viditelná a ukazuje současnou lokaci a dostupné cesty. Z interiérů lze vyjít na ulici.
-- Každé NPC má vlastní historii rozhovorů; další setkání navazuje na předchozí informace. Slušné rozloučení lze zvolit vždy během dialogu. Po opakování stejné otázky postava reaguje na opakování.
-- Otázky ve volbách se po položení skryjí. Po vlastní textové zprávě se nabídnou návazné reakce. Neznámé formulace mají variabilní, **pravidlové** reakce; nejedná se o plnohodnotné porozumění AI.
-- Osobní mapa odkrývá známé lokace včetně míst doporučených během rozhovoru.
-- Aktivity odemykají mise. V knihovně lze číst krátký text o naslouchání nebo o posuzování informačních zdrojů, což po dočtení přidá Mindset (maximálně jednou za herní den pro každý typ aktivity).
-- Peněženka (začátek 85 €), nákup preclíku (2,50 €), práce (45 € za směnu), pracovní absence, výstraha a možnost propuštění. Opakované hrubé chování vůči nadřízenému má také herní důsledky.
-- Přepínač CZ/DE mění rozhraní a připravené NPC repliky; historie NPC ukládá obě jazykové verze. Hráčův vlastní text se nepřekládá.
-- Telefon s oznámeními, kontakty a deníkem.
+- Přesné verzování `v0.5.0` v hlavičce a `package.json`; výraz „pilot“ se v novém rozhraní nepoužívá.
+- Nová výrazně stylizovaná webová grafika: velká ilustrativní mapa s mlhou a odemykanými budovami, samostatný perspektivní pohled hráče, sezónní vzhled, panel dialogu a virtuální telefon.
+- 50 originálních fiktivních obyvatel v `lib/residents.ts`, každý s vlastním temperamentem, hodnotami, zaměstnáním, případně vedlejší prací, rozvrhem a dovolenou. Místo, kde jsou, se přepočítává podle herního dne a hodiny, takže se například střídají lidé v pekárně.
+- Historie rozhovorů se ukládá pro každého obyvatele zvlášť. Již položené nabídnuté otázky mizí, přibývají návazné volby. Kdykoliv lze odejít.
+- Dialogy mohou být generované modelem OpenAI, **pokud je nastavena serverová proměnná `OPENAI_API_KEY`**. Bez klíče funguje lokální pravidlový engine. Každá odpověď modelu obsahuje oddělenou českou a německou variantu.
+- Mindset **nemá horní limit**. Rozvíjí se čtením naučných textů a za správné odpovědi v mini-kvízech; každá konkrétní kvízová otázka odměňuje pouze poprvé.
+- Práce a peněženka: zaměstnání od startu, směny, výdělek, absence a možné propuštění.
+- Průběžně viditelná navigace, fungující návrat z interiérů a osobní mapa s doporučeními.
 
-## Vyzkoušení
+## Spuštění
 
-1. Nainstaluj Node.js 20.9+.
-2. Spusť `npm install` a `npm run dev`.
-3. Otevři `http://localhost:3000`.
-4. Pro veřejné nasazení připoj GitHub repozitář `Standajagermaker/living-town` do Vercelu.
+```bash
+npm install
+npm run dev
+```
 
-Tato lokální verze nepotřebuje žádné API klíče. Prozatímní soubory `.env.example` a `.gitignore` jsou na GitHubu.
+Otevři http://localhost:3000. Pro Vercel připoj repozitář `Standajagermaker/living-town`. Přepínání CZ/DE je v horní liště.
 
-## Supabase (příprava)
+## Volitelné AI dialogy
 
-Soubor `supabase/001_initial.sql` je počáteční návrh datového modelu, ale **frontend Pilot 004 ještě Supabase nepoužívá**. Nové lokální herní stavy (Mindset, zaměstnání, mise, individuální historie dialogů) bude třeba později promítnout i do serverového schématu. Nikdy nezveřejňuj secret/service-role klíče pod prefixem `NEXT_PUBLIC_`.
+Ve **Vercel > Project > Settings > Environment Variables** nastav:
 
-## Omezení prototypu
+- `OPENAI_API_KEY`: vlastní API klíč, pouze server-side.
+- `OPENAI_DIALOGUE_MODEL`: volitelně `gpt-4.1-mini`.
 
-Všechny události a NPC jsou zatím lokálně simulované. Hra neběží sama na serveru 24/7, neobsahuje autentizaci, trvalou sdílenou databázi ani generativní LLM. Odpovědi na zcela volný text jsou variabilní podle kontextu, ale nedokážou spolehlivě pochopit libovolný význam. Pro produkční hru bude potřeba serverově řízený stav a bezpečnostní pravidla.
+Potom spusť nový deployment. Klíč **nikdy** nevkládej do GitHubu, do `NEXT_PUBLIC_` proměnných ani do `.env.example`. Backend vystupuje jako konkrétní NPC s odlišnou povahou, náladou a hodinou. Mimo nastavený klíč vše funguje bez placeného API.
 
-**Nasazení:** změny v tomto repozitáři samy o sobě neprokazují, že Vercel build proběhl úspěšně.
+## Co zatím není hotové
+
+- 50 NPC má deterministicky simulované rozvrhy, ale **neběží 50 nepřetržitě aktivních AI agentů**. Model se volá pouze při rozhovoru, pokud je nakonfigurován.
+- Stav a historie jsou zatím pouze v `localStorage` konkrétního prohlížeče; nepřetržitý 24/7 server, skutečný multiplayer a společná autoritativní databáze přijdou později.
+- Sezónní tlačítka přepínají zatím ilustrativní podoby města; nejde o napojení na reálné počasí.
+- Portréty obyvatel jsou prozatím jednoduché symbolické avatary. Výtvarná kvalita se bude dále rozpracovávat podle požadované grafické předlohy.
+- Návštěvy a dialogy modelu se zatím ověřují vůči lokálnímu klientskému stavu; před produkčním provozem je třeba zavést serverově potvrzovanou přítomnost, RLS a robustní omezení požadavků.
+- SQL soubory `supabase/` jsou návrh budoucího backendu. Tato verze nepoužívá živé Supabase spojení.
+
+## Verzování
+
+- v0.1 – první rozhovory na ulici
+- v0.2 – jazyk, mapa, peněženka a cíle
+- v0.3 – paměť otázek, doporučené lokace
+- v0.4 – mise, navigace, práce a Mindset
+- **v0.5.0 – nová vizuální koncepce, 50 obyvatel, rozvrhy, volitelné AI dialogy a znalostní výzvy**
+
+Další plánovaný milník: v0.6.0 – bezpečná serverová perzistence, NPC vztahy a společný čas světa.

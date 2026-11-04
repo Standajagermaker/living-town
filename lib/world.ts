@@ -7,6 +7,7 @@ import {isVenueOpen} from './seasonal';
 import {restaurantCast,initialRestaurantStory,type RestaurantStory,foodTrouble} from './restaurantStory';
 import {nextUnusedFact} from './facts';
 import {weatherAt} from './weather';
+import {seasonFor,missingOutfit} from './social';
 import {type Pet} from './pets';
 import {supermarketEncounter} from './marketEncounter';
 export type {Place,Lang};
@@ -34,12 +35,12 @@ export type TownState={
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
- playerAge:number;ageConfirmed:boolean;family:{relationship:'single'|'dating'|'partner'|'married';partnerId?:string;children:number};pet:Pet|null;
+ playerAge:number;ageConfirmed:boolean;stress:number;vacationDays:number;workShifts:number;careerRank:number;monthlyBilling:number;utilitiesDue:number;housingStatus:'rented'|'warning'|'temporary'|'owned';family:{relationship:'single'|'dating'|'partner'|'married';partnerId?:string;children:number};pet:Pet|null;
  completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;factsSeen:string[];lastFactDay:number;marketVisits:number;marketEncounterResolved:number;marketLastResponse?:{cs:string;de:string};marketLastResponseVisit?:number;
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
- version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,playerAge:25,ageConfirmed:false,family:{relationship:'single',children:0},pet:null,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
+ version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,playerAge:25,ageConfirmed:false,stress:15,vacationDays:24,workShifts:0,careerRank:0,monthlyBilling:-1,utilitiesDue:0,housingStatus:'rented',family:{relationship:'single',children:0},pet:null,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
  discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory(),factsSeen:[],lastFactDay:-1,marketVisits:0,marketEncounterResolved:-1
@@ -49,7 +50,7 @@ export function restoreTown(raw:unknown):TownState{
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
  if(v.version!==5&&v.version!==6&&v.version!==7&&v.version!==8)return freshState;
- return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})},factsSeen:v.factsSeen??[],lastFactDay:v.lastFactDay??-1,marketVisits:v.marketVisits??0,marketEncounterResolved:v.marketEncounterResolved??-1,playerAge:v.playerAge??25,ageConfirmed:v.ageConfirmed??false,family:{relationship:'single',children:0,...v.family},pet:v.pet??null};
+ return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})},factsSeen:v.factsSeen??[],lastFactDay:v.lastFactDay??-1,marketVisits:v.marketVisits??0,marketEncounterResolved:v.marketEncounterResolved??-1,playerAge:v.playerAge??25,ageConfirmed:v.ageConfirmed??false,family:{relationship:'single',children:0,...v.family},pet:v.pet??null,stress:v.stress??15,vacationDays:v.vacationDays??24,workShifts:v.workShifts??0,careerRank:v.careerRank??0,monthlyBilling:v.monthlyBilling??-1,utilitiesDue:v.utilitiesDue??0,housingStatus:v.housingStatus??'rented'};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
@@ -73,7 +74,20 @@ export function callRestaurantStaff(s:TownState,role:'chef'|'owner'):TownState{
  }
  return {...s,restaurantStory:{...s.restaurantStory,ownerCalled:true},minute:s.minute+5};
 }
-export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].includes(to)&&s.discovered.includes(to)&&isVenueOpen(to,s.day));
+export function gameLevel(s:TownState){return 1+Math.floor(s.workShifts/4)+Math.floor(s.known.length/6)+Math.floor(s.mindset/45);}
+export function locationAccess(s:TownState,to:Place):{allowed:boolean;cs:string;de:string}{
+ const missing=missingOutfit(to,s.day,s.social.wardrobe);
+ if(missing.length)return {allowed:false,cs:'Nejdřív potřebuješ vhodné vybavení ze sportovního obchodu.',de:'Du brauchst zunächst passende Ausrüstung aus dem Sportgeschäft.'};
+ if(to==='hotel'&&!s.onHoliday)return {allowed:false,cs:'Hotel slouží k přespání v cizím městě na dovolené.',de:'Das Hotel dient zur Übernachtung in der Reisestadt.'};
+ if(to==='work'&&s.onHoliday)return {allowed:false,cs:'Na dovolené do své práce nemůžeš.',de:'Im Urlaub kannst du nicht an deinem Arbeitsplatz arbeiten.'};
+ if(to==='gym'&&s.onHoliday)return {allowed:false,cs:'V cizím městě nemáš členství ve fitness.',de:'In der Reisestadt hast du kein Fitnessstudio-Abo.'};
+ if(to==='home'&&s.onHoliday)return {allowed:false,cs:'Tvůj domov je v původním městě. Nejdřív se vrať vlakem.',de:'Dein Zuhause liegt in der Heimatstadt. Fahre zuerst mit dem Zug zurück.'};
+ const levels:Partial<Record<Place,number>>={mountains:2,church:2,theatre:2,bank:2,resort:3};
+ if(gameLevel(s)<(levels[to]??1))return {allowed:false,cs:'Toto místo se odemkne na úrovni '+levels[to]+'.',de:'Dieser Ort wird ab Level '+levels[to]+' freigeschaltet.'};
+ if(!isVenueOpen(to,s.day))return {allowed:false,cs:'Místo je mimo sezonu zavřené.',de:'Dieser Ort ist außerhalb der Saison geschlossen.'};
+ return {allowed:true,cs:'',de:''};
+}
+export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].includes(to)&&s.discovered.includes(to)&&locationAccess(s,to).allowed);
 // Travel always takes time when changing locations, including clicking an already-discovered map pin.
 export function travelMinutes(from:Place,to:Place,day:number):number{
  if(from===to)return 0;
@@ -95,11 +109,11 @@ export function go(s:TownState,to:Place):TownState{
  return moveTo(s,to);
 }
 export function fastTravel(s:TownState,to:Place):TownState{
- if(!s.discovered.includes(to)||!isVenueOpen(to,s.day))return s;
+ if(!s.discovered.includes(to)||!locationAccess(s,to).allowed)return s;
  return moveTo(s,to);
 }
 export function goRecommended(s:TownState,to:Place):TownState{
- if(!s.recommended.includes(to)||!s.discovered.includes(to)||!isVenueOpen(to,s.day))return go(s,to);
+ if(!s.recommended.includes(to)||!s.discovered.includes(to)||!locationAccess(s,to).allowed)return go(s,to);
  return moveTo(s,to);
 }
 const pair=(cs:string,de:string)=>({cs,de});
@@ -406,10 +420,10 @@ export function doShift(s:TownState):TownState{
  if(working<60)return s;
  const lunch=Math.round((5.2+((s.day*17+11)%390)/100)*100)/100;
  const isLate=start>WORK_START+15;
- const gross=isLate?Math.round(45*(working/(WORK_END-WORK_START))*100)/100:45;
+ const gross=(isLate?Math.round(45*(working/(WORK_END-WORK_START))*100)/100:45)*(1+s.careerRank*.22);
  const n=addTime(s,WORK_END-s.minute);
  const balance=Math.round((s.wallet+gross-lunch)*100)/100;
- return {...n,wallet:balance,lastShift:s.day,completed:[...new Set([...s.completed,'work'])],
+ return {...n,wallet:balance,stress:Math.min(100,s.stress+6),workShifts:s.workShifts+1,careerRank:s.workShifts+1>=15?2:s.workShifts+1>=6?1:s.careerRank,lastShift:s.day,completed:[...new Set([...s.completed,'work'])],
  walletHistory:[...s.walletHistory,Math.round((s.wallet+gross)*100)/100,balance],
  life:{...n.life,lastMeal:s.day*1440+12*60+30,hunger:Math.max(10,n.life.hunger-38),energy:Math.max(3,n.life.energy)}};
 }

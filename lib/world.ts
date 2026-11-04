@@ -28,9 +28,9 @@ export const placeNames:Record<Place,Record<Lang,string>>={
  home:{cs:'Domov',de:'Zuhause'},street:{cs:'Ulice',de:'Straße'},bakery:{cs:'Pekárna',de:'Bäckerei'},
  square:{cs:'Náměstí',de:'Marktplatz'},work:{cs:'Práce',de:'Arbeitsplatz'},library:{cs:'Knihovna',de:'Bibliothek'},
  market:{cs:'Supermarket',de:'Supermarkt'},cafe:{cs:'Kavárna',de:'Café'},park:{cs:'Park',de:'Park'},
- church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'},mountains:{cs:'Hory',de:'Berge'},restaurant:{cs:'Restaurace',de:'Restaurant'},outfitter:{cs:'Sportovní obchod',de:'Sportgeschäft'},pool:{cs:'Venkovní plovárna',de:'Freibad'},resort:{cs:'Horské středisko',de:'Bergsportzentrum'},bank:{cs:'Banka',de:'Bank'},theatre:{cs:'Divadlo',de:'Theater'},petshop:{cs:'Zverimex',de:'Tierhandlung'}
+ church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'},mountains:{cs:'Hory',de:'Berge'},restaurant:{cs:'Restaurace',de:'Restaurant'},outfitter:{cs:'Sportovní obchod',de:'Sportgeschäft'},pool:{cs:'Venkovní plovárna',de:'Freibad'},resort:{cs:'Horské středisko',de:'Bergsportzentrum'},bank:{cs:'Banka',de:'Bank'},theatre:{cs:'Divadlo',de:'Theater'},petshop:{cs:'Zverimex',de:'Tierhandlung'},train:{cs:'Vlakové nádraží',de:'Bahnhof'}
 };
-export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square'],pool:['street','park'],resort:['street','mountains'],bank:['street','square'],theatre:['street','square'],petshop:['street','square']};
+export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop','train'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square'],pool:['street','park'],resort:['street','mountains'],bank:['street','square'],theatre:['street','square'],petshop:['street','square'],train:['street','square']};
 export type TownState={
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
@@ -91,7 +91,7 @@ export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].include
 // Travel always takes time when changing locations, including clicking an already-discovered map pin.
 export function travelMinutes(from:Place,to:Place,day:number):number{
  if(from===to)return 0;
- const far=new Set<Place>(['mountains','resort','hotel','pool']);
+ const far=new Set<Place>(['mountains','resort','hotel','pool','train']);
  const distant=far.has(from)||far.has(to);
  const nearby=new Set<Place>(['square','street','bakery','cafe','library','bank','theatre','restaurant']);
  const close=nearby.has(from)&&nearby.has(to);

@@ -3,6 +3,7 @@ import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
 import {byId} from '../lib/residents';
 import {supermarketEncounter,respondToSupermarket} from '../lib/marketEncounter';
+import {petCatalog,petFoodOffer,adoptPet,buyPetFood,feedPet,walkPet,playWithPet,petNeedsWalk,petLabel,type PetKind} from '../lib/pets';
 import {eat,groceries,groceryOffers,watchTv,browseHome,rest,borrow,readLoan,returnLoan,lookAround,catalog,eventsForDay,registerEvent,attendEvent,type TownEvent} from '../lib/life';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void;onAttend?:(s:TownState)=>void;onFocus?:(focus:'room'|'tv'|'phone')=>void};
 const l={
@@ -12,6 +13,7 @@ const l={
 export function DailyLife({state,lang,onState,onFocus}:Props){
  const t=l[lang],life=state.life;
  const [openBook,setOpenBook]=useState<string|null>(null);
+ const [newPetName,setNewPetName]=useState(lang==='cs'?'Balu':'Balu');
  const book=catalog.find(b=>b.id===openBook);
  const encounter=supermarketEncounter(state);
  const encounterName=encounter?byId(encounter.residentId)?.name:undefined;
@@ -22,8 +24,25 @@ export function DailyLife({state,lang,onState,onFocus}:Props){
    <section><h4>🛏 {t.bed}</h4><button onClick={()=>onState(rest(state))}>{t.sleep}</button></section>
    <section><h4>📚 {t.books}</h4>{life.loans.length?life.loans.map(b=><button key={b.id} disabled={b.readDay!==null} onClick={()=>setOpenBook(b.id)}>{catalog.find(x=>x.id===b.id)?.[lang]} {b.readDay!==null?'✓':''}</button>):<small>{t.noLoans}</small>}</section>
    </div>
+   {state.pet&&<section className="pet-at-home">
+    <h4>🐾 {state.pet.name} · {petLabel(state.pet,lang)}</h4>
+    <p>{lang==='cs'?'Pohoda':'Wohlbefinden'}: {Math.round(state.pet.care)} % · {lang==='cs'?'Zásoby krmiva':'Futtervorrat'}: {state.pet.food}</p>
+    {state.pet.care<35&&<p>{lang==='cs'?'Mazlíček potřebuje více pozornosti.':'Dein Tier braucht mehr Aufmerksamkeit.'}</p>}
+    <div className="pet-actions">
+     <button disabled={state.pet.food<1||state.pet.lastFedDay===state.day} onClick={()=>onState(feedPet(state))}>{lang==='cs'?'🥣 Nakrmit':'🥣 Füttern'}</button>
+     {petNeedsWalk(state.pet)&&<button disabled={state.pet.lastWalkDay===state.day||state.life.energy<15} onClick={()=>onState(walkPet(state))}>{lang==='cs'?'🦮 Vyvenčit (40 min)':'🦮 Gassi gehen (40 Min)'}</button>}
+     <button disabled={state.pet.lastPlayedDay===state.day} onClick={()=>onState(playWithPet(state))}>{lang==='cs'?'💛 Věnovat čas':'💛 Zeit verbringen'}</button>
+    </div>
+   </section>}
    {book&&<div className="reading-card"><h4>{book[lang]}</h4><p>{lang==='cs'?book.csText:book.deText}</p><button onClick={()=>{onState(readLoan(state,book.id));setOpenBook(null)}}>{t.finished}</button><button onClick={()=>setOpenBook(null)}>{t.close}</button></div>}
    </>}
+  {state.place==='petshop'&&<div className="life-object pet-store">
+    <h4>🐾 {lang==='cs'?'Zverimex a potřeby pro zvířata':'Tierhandlung und Tierbedarf'}</h4>
+    {!state.pet?<><p>{lang==='cs'?'Pořízení zvířete znamená dlouhodobý závazek. Každý den potřebuje péči a potravu.':'Ein Haustier bedeutet tägliche Verantwortung: Futter, Zeit und Fürsorge.'}</p>
+     <label>{lang==='cs'?'Jméno mazlíčka':'Name des Haustiers'} <input maxLength={25} value={newPetName} onChange={e=>setNewPetName(e.target.value)}/></label>
+     {petCatalog.map(p=><div className="pet-store-item" key={p.id}><span>{p[lang]} · {p.adoption.toFixed(2)} €</span><button disabled={state.wallet<p.adoption||!newPetName.trim()} onClick={()=>onState(adoptPet(state,p.id,newPetName))}>{lang==='cs'?'Adoptovat':'Adoptieren'}</button></div>)}
+     </>:<><p>{lang==='cs'?'Nákup krmiva pro':'Futter kaufen für'} {state.pet.name}</p><button disabled={state.wallet<petFoodOffer(state.day)} onClick={()=>onState(buyPetFood(state))}>{lang==='cs'?'Koupit 5 porcí':'5 Portionen kaufen'} · {petFoodOffer(state.day).toFixed(2)} €</button></>}
+   </div>}
   {state.place==='market'&&<div className="life-object"><h4>🛒 {t.shop}</h4>
  {encounter&&<div className="market-encounter">
   <strong>💬 {encounterName??(lang==='cs'?'Známá tvář':'Ein bekanntes Gesicht')}</strong>

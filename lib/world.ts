@@ -19,9 +19,9 @@ export const placeNames:Record<Place,Record<Lang,string>>={
  home:{cs:'Domov',de:'Zuhause'},street:{cs:'Ulice',de:'Straße'},bakery:{cs:'Pekárna',de:'Bäckerei'},
  square:{cs:'Náměstí',de:'Marktplatz'},work:{cs:'Práce',de:'Arbeitsplatz'},library:{cs:'Knihovna',de:'Bibliothek'},
  market:{cs:'Supermarket',de:'Supermarkt'},cafe:{cs:'Kavárna',de:'Café'},park:{cs:'Park',de:'Park'},
- church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'}
+ church:{cs:'Kostel',de:'Kirche'},hotel:{cs:'Hotel',de:'Hotel'},gym:{cs:'Fitness',de:'Fitnessstudio'},mountains:{cs:'Hory',de:'Berge'},restaurant:{cs:'Restaurace',de:'Restaurant'},outfitter:{cs:'Sportovní obchod',de:'Sportgeschäft'}
 };
-export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square'],church:['street','square'],hotel:['street','square'],gym:['street','square']};
+export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square']};
 export type TownState={
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;

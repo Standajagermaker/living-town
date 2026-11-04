@@ -1,7 +1,7 @@
 'use client';
 import type {Place,Lang} from '../lib/world';
 import {placeNames} from '../lib/world';
-export const glyph:Record<Place,string>={home:'⌂',street:'🚶',bakery:'☕',square:'♜',work:'▣',library:'▤',market:'🛒',cafe:'☕',park:'🌳',church:'⛪',hotel:'🛏',gym:'🏋'};
+export const glyph:Record<Place,string>={home:'⌂',street:'🚶',bakery:'☕',square:'♜',work:'▣',library:'▤',market:'🛒',cafe:'☕',park:'🌳',church:'⛪',hotel:'🛏',gym:'🏋',mountains:'⛰',restaurant:'🍽',outfitter:'🧥'};
 export function ArtTown({season}:{season:number}){
  return <svg className={'town-art season-'+season} viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
  <defs><linearGradient id="sky-art" x2="0" y2="1"><stop stopColor="#e2cba9"/><stop offset=".72" stopColor="#b5d1c8"/><stop offset="1" stopColor="#839c88"/></linearGradient><linearGradient id="river-art" x2="0" y2="1"><stop stopColor="#b4ddcb"/><stop offset="1" stopColor="#3b7c91"/></linearGradient></defs>
@@ -18,7 +18,8 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
  {place:'home',x:14,y:73},{place:'street',x:48,y:59},{place:'bakery',x:34,y:69},
  {place:'square',x:51,y:43},{place:'work',x:78,y:39},{place:'library',x:31,y:42},
  {place:'market',x:71,y:58},{place:'cafe',x:60,y:52},{place:'park',x:81,y:66},
- {place:'church',x:59,y:30},{place:'hotel',x:17,y:54},{place:'gym',x:86,y:24}
+ {place:'church',x:59,y:30},{place:'hotel',x:17,y:54},{place:'gym',x:86,y:24},
+ {place:'mountains',x:72,y:18},{place:'restaurant',x:43,y:49},{place:'outfitter',x:24,y:59}
 ];
 export function StreetView({place,lang,season}:{place:Place;lang:Lang;season:number}){
  return <div className={'player-street scene-'+place+' season-'+season}>

@@ -1,5 +1,6 @@
 import type {Place} from './game';
 import type {TownState,Lang} from './world';
+import {applyNewDay,collectReplies} from './social';
 export type CalendarEntry={eventId:string;day:number;status:'going'|'attended'};
 export type TownEvent={id:string;day:number;start:number;end:number;place:Place;cs:string;de:string;emoji:string;detailCs:string;detailDe:string;attendees:string[]};
 export type LifeState={
@@ -37,7 +38,8 @@ export function addTime(s:TownState,mins:number):TownState{
  let minute=s.minute+mins, day=s.day;
  if(minute>=1440){day+=Math.floor(minute/1440);minute%=1440}
  const life=s.life??initialLife();
- return {...s,day,minute,life:{...life,energy:Math.max(0,life.energy-Math.max(0,mins)*.035),hunger:Math.min(100,life.hunger+Math.max(0,mins)*.045)}};
+ const next={...s,day,minute,life:{...life,energy:Math.max(0,life.energy-Math.max(0,mins)*.035),hunger:Math.min(100,life.hunger+Math.max(0,mins)*.045)}};
+ return day!==s.day?applyNewDay(next):collectReplies(next);
 }
 export function eat(s:TownState):TownState{
  const l=s.life??initialLife();if(s.place!=='home'||l.groceries<=0)return s;
@@ -58,8 +60,9 @@ export function rest(s:TownState):TownState{
  // A full sleep cycle takes the player to the morning of the following day.
  if(n.day===s.day)n={...n,day:s.day+1,minute:8*60};else n={...n,minute:8*60};
  const missed=s.day%7>=2&&s.lastShift!==s.day&&s.employment!=='fired'?s.absences+1:s.absences;
- return {...n,place:'home',selectedNpc:null,absences:missed,employment:missed>=4?'fired':missed>=2?'warned':s.employment,
+ const next={...n,place:'home' as Place,selectedNpc:null,absences:missed,employment:missed>=4?'fired' as const:missed>=2?'warned' as const:s.employment,
   life:{...n.life,energy:100,hunger:Math.min(100,n.life.hunger+14),lastBed:n.day,phoneOpenedAt:null}};
+ return applyNewDay(next);
 }
 export function borrow(s:TownState,id:string):TownState{
  const l=s.life??initialLife();if(s.place!=='library'||l.loans.some(b=>b.id===id))return s;
@@ -105,7 +108,7 @@ export function attendEvent(s:TownState,event:TownEvent):TownState{
 }
 export function lookAround(s:TownState):TownState{
  if(s.place!=='street'&&s.place!=='square')return s;
- const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square'];
+ const hidden:Place[]=['market','cafe','park','church','hotel','gym','library','square','mountains','restaurant','outfitter'];
  const available=hidden.filter(p=>!s.discovered.includes(p));
  const next=addTime(s,8);
  if(!available.length)return next;

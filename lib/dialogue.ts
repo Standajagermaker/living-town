@@ -10,6 +10,46 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  ['bakery-pretzel','Jeden preclík, prosím.','Eine Brezel, bitte.'],
  ['bakery-bread','Máte čerstvý chléb?','Haben Sie frisches Brot?'],
  ['bakery-wait','Ještě si vybírám, hned to bude.','Ich schaue noch kurz, gleich bin ich so weit.']]);
+ if(/co bys tu chtěl najít|co bys tady chtěl najít|was möchtest du hier finden|was würdest du hier gern finden/.test(line))return options([
+ ['find-friends','Rád bych tu poznal lidi, se kterými si budu rozumět.','Ich möchte Menschen kennenlernen, mit denen ich mich gut verstehe.'],
+ ['find-peace','Hlavně klid a pocit, že sem patřím.','Vor allem Ruhe und das Gefühl, hier dazuzugehören.'],
+ ['find-purpose','Možná nový začátek. Ještě přesně nevím jaký.','Vielleicht einen Neuanfang. Ich weiß noch nicht genau, wie.']]);
+ if(/máš i nějaký koníček|hast du auch ein hobby|co tě baví|was machst du gern/.test(line))return options([
+ ['hobbies-sport','Rád sportuju, nejradši venku.','Ich mache gern Sport, am liebsten draußen.'],
+ ['hobbies-books','Rád si čtu a učím se nové věci.','Ich lese gern und lerne Neues.'],
+ ['hobbies-explore','Teprve zkouším najít něco, co mě opravdu chytne.','Ich probiere noch aus, was mich wirklich begeistert.']]);
+ if(/co se ti líbilo nejvíc|was hat dir bisher am besten gefallen/.test(line))return options([
+ ['liked-park','Zatím mě nejvíc zaujal park a okolí.','Bisher gefallen mir der Park und die Umgebung am besten.'],
+ ['liked-people','Líbí se mi, že se tu lidé občas zastaví a prohodí pár slov.','Mir gefällt, dass die Leute hier manchmal miteinander reden.'],
+ ['liked-quiet','Ten klid. Oproti velkému městu je to změna.','Die Ruhe. Das ist anders als in der Großstadt.']]);
+ if(/co tě dnes ještě čeká|was steht bei dir heute noch an/.test(line))return options([
+ ['plans-work','Ještě musím něco dokončit v práci.','Ich muss noch etwas bei der Arbeit erledigen.'],
+ ['plans-home','Půjdu nakoupit a pak domů.','Ich gehe noch einkaufen und dann nach Hause.'],
+ ['plans-free','Zatím nemám nic v plánu. Uvidím, co se naskytne.','Noch habe ich nichts vor. Mal sehen, was sich ergibt.']]);
+ if(/kam ses chtěl dostat|wohin wolltest du/.test(line))return options([
+ ['lost-square','Hledal jsem náměstí.','Ich habe den Marktplatz gesucht.'],
+ ['lost-library','Chtěl jsem dojít do knihovny.','Ich wollte zur Bibliothek.'],
+ ['lost-wander','Vlastně nikam konkrétně. Jen se tu rozhlížím.','Eigentlich nirgendwohin. Ich schaue mich nur um.']]);
+ if(/co máš dnes na stole za úkoly|was steht heute bei dir an|už jsi vyřídil dnešní úkoly|hast du deine aufgaben/.test(line))return options([
+ ['work-ready','Mám své úkoly připravené, můžu se do nich pustit.','Ich habe meine Aufgaben vorbereitet und kann loslegen.'],
+ ['work-stuck','Na jednom úkolu jsem se zasekl.','Bei einer Aufgabe komme ich nicht weiter.'],
+ ['work-progress','Něco už mám hotové, zbytek mě ještě čeká.','Einiges ist erledigt, der Rest wartet noch.']]);
+ if(/hledáte něco konkrétního ke čtení|suchen sie etwas bestimmtes zum lesen/.test(line))return options([
+ ['read-story','Rád bych si půjčil nějaký dobrý příběh.','Ich würde gern eine gute Geschichte ausleihen.'],
+ ['read-learn','Hledám něco, z čeho se něco dozvím.','Ich suche etwas, aus dem ich etwas lernen kann.'],
+ ['read-browse','Zatím nevím, chci se nejdřív porozhlédnout.','Ich weiß noch nicht, ich möchte erst stöbern.']]);
+ if(/přejete si poradit s účtem|geht es um ihr konto/.test(line))return options([
+ ['bank-account','Rád bych se podíval na svůj účet.','Ich möchte mein Konto ansehen.'],
+ ['bank-loan','Zajímají mě podmínky půjčky.','Ich interessiere mich für die Bedingungen eines Kredits.'],
+ ['bank-notnow','Děkuji, zatím se jen informuji.','Danke, ich informiere mich erst einmal.']]);
+ if(/co si dáte|ká(vu|vu).*čaj|was darf es sein.*kaffee|kaffee oder tee/.test(line))return options([
+ ['cafe-coffee','Kávu, prosím.','Einen Kaffee, bitte.'],
+ ['cafe-tea','Dám si čaj, děkuji.','Ich nehme einen Tee, danke.'],
+ ['cafe-decide','Ještě se podívám na nabídku.','Ich schaue erst auf die Karte.']]);
+ if(/co myslíš, že bude dál|was passiert wohl als nächstes/.test(line))return options([
+ ['future-hope','Doufám, že se věci vyvinou dobře.','Ich hoffe, dass sich alles gut entwickelt.'],
+ ['future-uncertain','To teď opravdu nevím.','Das weiß ich im Moment wirklich nicht.'],
+ ['future-action','Záleží také na tom, co pro to uděláme.','Es hängt auch davon ab, was wir dafür tun.']]);
  if(/co bys dělal ty|was würden sie tun|was würdest du tun/.test(line))return options([
  ['situation-facts','Nejdřív bych zjistil, co se skutečně stalo.','Zuerst würde ich herausfinden, was wirklich passiert ist.'],
  ['situation-talk','Zkusil bych si s tím člověkem promluvit.','Ich würde versuchen, mit der Person zu reden.'],
@@ -77,6 +117,36 @@ export function contextualResponse(id:string):Phrase|null{
  'self-explore':{cs:'To je dobrý plán. Na náměstí se pořád něco děje.',de:'Guter Plan. Auf dem Marktplatz ist immer etwas los.'},
  'self-relax':{cs:'To ti přeju. Tady se na klid musí člověk občas taky objednat.',de:'Das wünsche ich dir. Hier muss man Ruhe manchmal ebenfalls reservieren.'},
  'self-people':{cs:'Držím palce. Zajímaví lidé se často objeví tam, kde je člověk nečeká.',de:'Viel Glück. Interessante Menschen tauchen oft ganz unerwartet auf.'},
+ 'find-friends':{cs:'To se mi líbí. Tady se lidé znají dlouho, ale nová přátelství vznikají taky.','de':'Das gefällt mir. Viele kennen sich hier lange, aber neue Freundschaften entstehen auch.'},
+ 'find-peace':{cs:'To chápu. Klid se tu najde, i když někdy za rohem překvapí soused s vrtačkou.',de:'Verstehe. Ruhe findet man hier, außer wenn der Nachbar seine Bohrmaschine auspackt.'},
+ 'find-purpose':{cs:'Někdy člověk nemusí všechno vědět hned. Co bys chtěl zkusit jako první?',de:'Man muss nicht gleich alles wissen. Was möchtest du zuerst ausprobieren?'},
+ 'hobbies-sport':{cs:'V okolí je fajn park. Běháš, nebo radši jezdíš na kole?',de:'Hier gibt es einen schönen Park. Läufst du lieber oder fährst du Rad?'},
+ 'hobbies-books':{cs:'Tak to se ti bude líbit knihovna. Mají tam i zajímavé besedy.',de:'Dann wird dir die Bibliothek gefallen. Dort gibt es auch interessante Lesungen.'},
+ 'hobbies-explore':{cs:'To znám. Já jsem jednou zkusil jógu. Tři dny jsem pak hledal svoje záda.',de:'Das kenne ich. Ich habe einmal Yoga ausprobiert. Danach habe ich drei Tage meinen Rücken gesucht.'},
+ 'liked-park':{cs:'V parku bývá nejhezčí ráno, když tam ještě není moc lidí.',de:'Im Park ist es morgens besonders schön, bevor viele Leute kommen.'},
+ 'liked-people':{cs:'To je pravda. Jen záleží, koho zrovna potkáš.',de:'Stimmt. Es kommt nur darauf an, wem man begegnet.'},
+ 'liked-quiet':{cs:'Tak to sis vybral dobře. Tedy pokud zrovna nejsou slavnosti.',de:'Dann bist du hier richtig. Solange nicht gerade Stadtfest ist.'},
+ 'plans-work':{cs:'Tak ať ti to uteče. Já už mám dnes hlavu jako pátrací balón.',de:'Dann viel Erfolg. Mein Kopf ist heute schon ganz voll.'},
+ 'plans-home':{cs:'Tak to máš docela obyčejný den. Někdy jsou ty nejlepší.',de:'Das klingt nach einem normalen Tag. Manchmal sind das die besten.'},
+ 'plans-free':{cs:'Tak si den užij. Někdy je nejlepší plán nemít žádný.',de:'Dann genieß den Tag. Manchmal ist kein Plan der beste Plan.'},
+ 'lost-square':{cs:'Náměstí je kousek odsud, po hlavní ulici.',de:'Der Marktplatz ist nicht weit, einfach die Hauptstraße entlang.'},
+ 'lost-library':{cs:'Knihovna je za náměstím. Není moc velká, ale mají dobrý výběr.',de:'Die Bibliothek liegt hinter dem Marktplatz. Klein, aber gut sortiert.'},
+ 'lost-wander':{cs:'Pak se klidně nech překvapit. Jen se nenech zavřít v obchodě po pracovní době.',de:'Dann lass dich überraschen. Lass dich nur nicht nach Ladenschluss einschließen.'},
+ 'work-ready':{cs:'Super. Tak ať nám to dnes odsýpá.',de:'Prima. Hoffentlich kommen wir heute gut voran.'},
+ 'work-stuck':{cs:'Co se děje? Můžu se na to po přestávce podívat.',de:'Woran liegt es? Ich kann nach der Pause mal schauen.'},
+ 'work-progress':{cs:'Tak to jsme na tom podobně. Hlavně ať nepřibude další naléhavý úkol.',de:'Dann geht es uns ähnlich. Hoffentlich kommt nichts Dringendes mehr dazu.'},
+ 'read-story':{cs:'Máme nové romány v zadní polici. Chcete se podívat?',de:'Wir haben neue Romane im hinteren Regal. Möchten Sie schauen?'},
+ 'read-learn':{cs:'Máme několik dobrých knih o historii i mezilidských vztazích.',de:'Wir haben gute Bücher über Geschichte und menschliche Beziehungen.'},
+ 'read-browse':{cs:'Samozřejmě, podívejte se. Kdybyste potřeboval poradit, jsem u pultu.',de:'Natürlich, schauen Sie sich um. Falls Sie Hilfe brauchen, bin ich am Schalter.'},
+ 'bank-account':{cs:'K účtu vám mohu vysvětlit dostupné služby.',de:'Ich kann Ihnen erklären, welche Kontodienste verfügbar sind.'},
+ 'bank-loan':{cs:'Záleží na vašich příjmech a splácení. Můžeme probrat podmínky.',de:'Das hängt von Einkommen und Rückzahlung ab. Wir können die Bedingungen besprechen.'},
+ 'bank-notnow':{cs:'Samozřejmě. Pokud budete něco potřebovat, ozvěte se.',de:'Natürlich. Falls Sie Fragen haben, melden Sie sich gern.'},
+ 'cafe-coffee':{cs:'Hned to bude. Přejete si mléko?',de:'Kommt sofort. Möchten Sie Milch dazu?'},
+ 'cafe-tea':{cs:'Jasně, máme černý a bylinkový. Který chcete?',de:'Gern, wir haben schwarzen Tee und Kräutertee. Welchen möchten Sie?'},
+ 'cafe-decide':{cs:'Jistě, dejte si čas. Až budete vědět, stačí říct.',de:'Natürlich, lassen Sie sich Zeit. Sagen Sie Bescheid, wenn Sie sich entschieden haben.'},
+ 'future-hope':{cs:'To bych si taky přál. Uvidíme, co přinesou další dny.',de:'Das wünsche ich mir auch. Mal sehen, was die nächsten Tage bringen.'},
+ 'future-uncertain':{cs:'Tak to jsme dva. Ještě chvíli tomu dejme.',de:'Dann sind wir schon zwei. Geben wir dem Ganzen etwas Zeit.'},
+ 'future-action':{cs:'Přesně. Jen je někdy těžké poznat, co změnit jako první.',de:'Genau. Manchmal ist nur schwer zu erkennen, was man zuerst ändern sollte.'},
  'generic-yes':{cs:'Klidně. Každý to má trochu jinak. Co tě na tom zaujalo?',de:'Gerne. Jeder sieht das etwas anders. Was interessiert dich daran?'},
  'generic-unsure':{cs:'To chápu. Někdy není kam spěchat.',de:'Das verstehe ich. Manchmal muss man nicht eilen.'},
  'generic-share':{cs:'Tak to máme něco společného. Jaká byla tvoje zkušenost?',de:'Dann haben wir etwas gemeinsam. Welche Erfahrung hast du gemacht?'}

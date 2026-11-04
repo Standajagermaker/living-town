@@ -1,7 +1,7 @@
 'use client';
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
-import {byId} from '../lib/world';
+import {byId,callRestaurantStaff} from '../lib/world';
 import {sendText,payRent,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
 const dict={
@@ -31,7 +31,11 @@ export function SocialActivities({state,lang,onState}:Props){
  {seasonFor(state.day)===3?<button disabled={!social.wardrobe.includes('skis')||!social.wardrobe.includes('wintercoat')||state.life.energy<25} onClick={()=>onState(sport(state,'ski'))}>🎿 {t.ski}</button>:<button disabled={(seasonFor(state.day)!==1&&seasonFor(state.day)!==2)||!social.wardrobe.includes('bike')||state.life.energy<25} onClick={()=>onState(sport(state,'downhill'))}>🚵 {t.downhill}</button>}
  </div>}
  {state.place==='hotel'&&<div className="life-object"><h4>✈ {t.holiday}</h4><button disabled={state.wallet<2000||social.lastHoliday===state.day} onClick={()=>onState(holiday(state))}>{t.travel}</button></div>}
- {state.place==='restaurant'&&<div className="life-object"><h4>🍲 {t.meal}</h4><button disabled={state.wallet<restaurantQuote(state)} onClick={()=>onState(restaurantMeal(state))}>{t.restaurant} · {restaurantQuote(state).toFixed(2)} €</button>
+ {state.place==='restaurant'&&<div className="life-object"><h4>🍲 {t.meal}</h4>
+ <div className="restaurant-staff-actions">
+ <button onClick={()=>onState(callRestaurantStaff(state,'chef'))} disabled={state.restaurantStory.chefCalled}>{lang==='cs'?'👨‍🍳 Požádat o kuchaře':'👨‍🍳 Koch rufen'}</button>
+ <button onClick={()=>onState(callRestaurantStaff(state,'owner'))} disabled={state.restaurantStory.ownerCalled}>{lang==='cs'?'👔 Požádat o majitele':'👔 Inhaber rufen'}</button>
+ </div><button disabled={state.wallet<restaurantQuote(state)} onClick={()=>onState(restaurantMeal(state))}>{t.restaurant} · {restaurantQuote(state).toFixed(2)} €</button>
  {friends.length>0&&<div className="restaurant-invite"><label>{t.inviteMeal}</label><select value={guest} onChange={e=>setGuest(e.target.value)}><option value="">—</option>{friends.map(id=><option key={id} value={id}>{byId(id)?.name}</option>)}</select>
  {guest&&<button disabled={state.wallet<restaurantQuote(state,guest)} onClick={()=>onState(restaurantMeal(state,guest))}>{t.inviteMeal} · {restaurantQuote(state,guest).toFixed(2)} €</button>}</div>}</div>}
  {state.place==='street'&&<div className="life-object"><h4>🎭 {lang==='cs'?'Divadlo':'Theater'}</h4><button onClick={()=>onState(theatreTicket(state))}>{t.theatre}</button></div>}

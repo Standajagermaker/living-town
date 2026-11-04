@@ -83,7 +83,7 @@ export function startConversation(s:TownState,id:string):TownState{
  const line=refuses
   ?pair(away?'Promiň, teď mám svoje plány. Rád si je nechám pro sebe. Měj se!':'Omlouvám se, dnes nemám chuť si povídat. Měj se!','Tut mir leid, ich habe gerade eigene Pläne und möchte sie für mich behalten. Bis dann!')
   :prompt;
- const n={...s,selectedNpc:refuses?null:id,conversations:{...s.conversations,[id]:{...prior,open:!refuses,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...line}]}}};
+ const n={...s,selectedNpc:id,conversations:{...s.conversations,[id]:{...prior,open:!refuses,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...line}]}}};
  return refuses?n:developBond(n,id,'time');
 }
 export function exitConversation(s:TownState):TownState{

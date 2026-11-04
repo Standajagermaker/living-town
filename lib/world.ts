@@ -191,7 +191,9 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  const bond=s.social?.bonds[id];
  if((bond?.warmth??0)>=12&&(bond?.trust??0)>=8&&!social.contacts.includes(id)&&s.day>=(bond?.cooldownUntil??-1))all.push({id:'contact',topic:'contact',cs:'Mohl bych si na tebe vzít kontakt?',de:'Dürfte ich deine Nummer haben?'});
  if(s.playerAge>=18&&(bond?.trust??0)>=10&&r.age>=18)all.push({id:'flirt',topic:'flirt',cs:'S tebou je docela příjemné povídání.',de:'Mit dir kann man sich wirklich angenehm unterhalten.'});
- if(s.playerAge>=18&&r.age>=18&&(bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
+ if(s.playerAge>=18&&r.age>=18&&s.place==='work'&&(bond?.warmth??0)>=18&&(bond?.trust??0)>=16)
+  all.push({id:'workplace-interest',topic:'flirt',cs:'Nechtěl(a) bys někdy po práci zajít na kávu? Bez očekávání.',de:'Hättest du nach der Arbeit mal Lust auf einen Kaffee? Ganz ohne Erwartungen.'});
+  if(s.playerAge>=18&&r.age>=18&&(bond?.warmth??0)>=15)all.push({id:'invite',topic:'invite',cs:'Nezajdeme někdy na kávu?',de:'Wollen wir irgendwann mal einen Kaffee trinken gehen?'});
  const lived=s.life.experiences??[];
  const unlocked:Answer[]=[];
  if(lived.includes('movies'))unlocked.push({id:'movies-chat',topic:'followup',cs:'Včera jsem koukal na zajímavý film. Co ráda sleduješ?',de:'Gestern habe ich einen interessanten Film gesehen. Was schaust du gern?'});
@@ -258,7 +260,8 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const id=s.selectedNpc;if(!id||!occupant(s).some(r=>r.id===id))return {...s,selectedNpc:null};
  const r=byId(id)!;const m=s.conversations[id]??fresh();if(!m.open)return s;
  const topic=choice?.topic??infer(input);
- if(topic==='bye')return exitConversation(s);
+ if((topic==='flirt'||topic==='invite')&&(s.playerAge<18||r.age<18))return s;
+  if(topic==='bye')return exitConversation(s);
  const askedId=choice?.id??topic;
  const repeat=m.asked.includes(askedId);
  const repeated=repeat?m.repeat+1:0;
@@ -303,7 +306,8 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
    pool:{cs:'Pracuju na plovárně.',de:'Ich arbeite im Freibad.'},
    resort:{cs:'Pracuju v lyžařském středisku.',de:'Ich arbeite in einem Skigebiet.'},
    bank:{cs:'Pracuju v bance.',de:'Ich arbeite in einer Bank.'},
-   theatre:{cs:'Pracuju v divadle.',de:'Ich arbeite im Theater.'}
+   theatre:{cs:'Pracuju v divadle.',de:'Ich arbeite im Theater.'},
+   petshop:{cs:'Pracuju ve zverimexu.',de:'Ich arbeite in einer Tierhandlung.'}
   };
   const phrase=jobPhrases[r.job??'square'];
   return pair(phrase.cs+(r.sideJob?' Občas mám ještě druhou práci.':''),phrase.de+(r.sideJob?' Gelegentlich habe ich noch einen Nebenjob.':''));
@@ -340,7 +344,10 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  'rest-owner-staff':pair('Jsou to dobří lidé. Někdy je ale těžké oddělit práci od soukromí.','Es sind gute Leute. Manchmal ist es aber schwer, Arbeit und Privates zu trennen.')
  };
  const choicePrefix=choice?.id.replace(/-\d+$/,'')??'';
- const contextualChoice=(choice&&(venueReaction[choicePrefix]??livedReplies[choice.id]))||(choice?contextualResponse(choice.id):null);
+ const workRomance=choice?.id==='workplace-interest'?(r.temperament==='reserved'||privateMood?
+ pair('Děkuju, ale na pracovišti si radši držím odstup. Neber to osobně.','Danke, aber am Arbeitsplatz halte ich lieber Abstand. Nimm es nicht persönlich.'):
+ pair('Možná ano, ale pracovní vztahy bývají složité. Můžeme se nejdřív lépe poznat.','Vielleicht. Beziehungen bei der Arbeit können kompliziert sein. Lernen wir uns erst besser kennen.')):null;
+ const contextualChoice=workRomance??(choice&&(venueReaction[choicePrefix]??livedReplies[choice.id]))||(choice?contextualResponse(choice.id):null);
  const key=contextualChoice??(topic==='custom'?variants[stableHash(input+r.id+m.turns.length)%variants.length]:responses[topic]);
  const boss=id==='npc-02'&&s.place==='work'&&topic==='advice';
  const bossIrritable=(s.day*11+s.minute*3)%5<3;

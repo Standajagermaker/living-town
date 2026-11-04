@@ -260,8 +260,18 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const interpersonal=topic==='contact'?contactOk?pair('Dobře, můžeme si někdy napsat. Jen nečekej odpověď okamžitě.','Gern, wir können uns schreiben. Aber erwarte bitte keine sofortige Antwort.'):pair('Díky za nabídku. Raději bychom se ještě poznali osobně.','Danke. Ich möchte dich lieber erst persönlich besser kennenlernen.'):
  topic==='invite'?inviteOk?pair('Káva na veřejném místě by mohla být fajn. Domů si ale hosty zatím nezvu.','Ein Kaffee an einem öffentlichen Ort wäre nett. Nach Hause lade ich aber noch niemanden ein.'):pair('Díky za pozvání. Momentálně se mi to nehodí.','Danke für die Einladung. Im Moment passt es mir nicht.'):
  topic==='flirt'?(mood==='irritable'||bond.trust<10?pair('To je milé, ale nechme tomu volný průběh.','Das ist nett, aber lassen wir es entspannt angehen.'):pair('Usmívám se. A teď mě zajímá, co ještě řekneš.','Ich muss lächeln. Jetzt bin ich gespannt, was du als Nächstes sagst.')):null;
- const contextual=interpersonal??(boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
- const newText=repeated?contextual:mood==='tired'?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
+ const isRepair=Boolean(choice?.id.startsWith('misunderstand-'));
+ const humourSignal=/haha|hehe|lol|vtip|srand|ironi|sarkas|witz|spaß|iron|scherz|😂|😄|😅/i.test(input);
+ const complexSignal=input.length>115&&/[;,]/.test(input);
+ const clashChance=(stableHash(r.id+':'+s.day+':'+m.turns.length)%13)===0;
+ const humourGap=humourSignal&&r.humor<42;
+ const comprehensionGap=complexSignal&&r.empathy<46;
+ const misunderstood=!isRepair&&s.place!=='bakery'&&s.place!=='library'&&s.place!=='work'&&mood!=='cheerful'&&(humourGap||comprehensionGap||((topic==='flirt'||topic==='custom')&&clashChance&&(knowledge?.trust??0)<10));
+ const friction=humourGap?pair('Počkej, to měl být vtip? Já jsem to pochopil úplně vážně. Jak jsi to myslel?','Moment, das war ein Witz? Ich habe das ganz ernst verstanden. Wie meinst du das?'):
+ comprehensionGap?pair('Promiň, ztrácím se v tom. Co tím přesně myslíš?','Entschuldige, ich komme nicht ganz mit. Was meinst du damit?'):
+ pair('Asi si teď úplně nerozumíme. Jak jsi to myslel?','Ich glaube, wir reden gerade aneinander vorbei. Wie meinst du das?');
+ const contextual=misunderstood?friction:interpersonal??(boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
+ const newText=repeated?contextual:mood==='tired'&&!misunderstood?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);
  let next:TownState={...s,minute:s.minute+2,conversations:{...s.conversations,[id]:{...m,asked:[...seen],topic,repeat:repeated,turns:[...m.turns,{role:'player',cs:input,de:input,raw:input},npcTurn]}}};
@@ -282,7 +292,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
   next={...next,discovered,recommended:[...new Set([...next.recommended,'square','library'] as Place[])],completed:[...new Set([...next.completed,'discover'])]};
  }
  if(repeated>=3){next={...next,conversations:{...next.conversations,[id]:{...next.conversations[id],open:false,turns:[...next.conversations[id].turns,{role:'npc',...pair('Na to už jsem odpovídal tolikrát, že si připadám jako porouchaná deska. Měj se!','Das habe ich so oft beantwortet, dass ich mich wie eine kaputte Schallplatte fühle. Bis dann!')}] }},selectedNpc:null};}
- next=developBond(next,id,topic==='flirt'?'flirt':topic==='thanks'||topic==='hobby'||topic==='about'?'kind':'time');
+ next=developBond(next,id,misunderstood?'time':isRepair?'kind':topic==='flirt'?'flirt':topic==='thanks'||topic==='hobby'||topic==='about'?'kind':'time');
  return next;
 }
 export const WORK_START=8*60;

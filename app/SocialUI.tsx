@@ -2,7 +2,8 @@
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
 import {byId,callRestaurantStaff,fastTravel} from '../lib/world';
-import {sendText,payRent,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
+import {destinations,travelToCity,returnFromHoliday} from '../lib/trainTravel';
+import {sendText,payRent,payUtilities,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
 const dict={
  cs:{contacts:'Kontakty',write:'Napsat zprávu',text:'Co chceš napsat?',send:'Odeslat',call:'Zavolat',wait:'Čeká na odpověď…',reply:'Odpověď',none:'Zatím nemáš žádné telefonní kontakty.',rent:'Nájem',due:'Další splatnost',pay:'Zaplatit nájem · 210 €',unpaid:'Nájem je po splatnosti.',store:'Obchod s vybavením',owned:'Vlastníš',buy:'Koupit',trip:'Výlet do hor',hike:'Vyrazit na túru',bike:'Vyrazit na kolo',swim:'Jít si zaplavat',ski:'Jít lyžovat',downhill:'Jít na downhill',holiday:'Dovolená',travel:'Odjet na dovolenou · 1 200 €',meal:'Jídlo',restaurant:'Najíst se v restauraci',inviteMeal:'Pozvat na jídlo',theatre:'Koupit vstupenku do divadla',season:'Roční období',seasonNames:['Jaro','Léto','Podzim','Zima'],close:'Zavřít',mountains:'V horách',social:'Zprávy',blocked:'Zatím se nechce spojit.',price:'€',confirm:'Potvrdit'},
@@ -20,7 +21,18 @@ export function SocialActivities({state,lang,onState}:Props){
  const [guest,setGuest]=useState<string>('');
  const friends=social.contacts.filter(id=>state.social.bonds[id]?.warmth>=18);
  return <div className="social-activities">
- {state.place==='home'&&<div className="life-object"><h4>🏠 {t.rent}</h4><p>{t.due}: {Math.max(state.day,social.housingPaidThrough)+1} · 210 €</p>{state.day>social.housingPaidThrough&&<p>{t.unpaid}</p>}<button onClick={()=>onState(payRent(state))} disabled={state.wallet<210||state.day<social.housingPaidThrough}>{t.pay}</button></div>}
+ {state.place==='home'&&<div className="life-object"><h4>🏠 {t.rent}</h4>
+ <p>{lang==='cs'?'Další první den měsíce':'Nächster Monatserster'}: {Math.floor(state.day/30)*30+31} · 210 €</p>
+ {social.rentArrears>0&&<p>{t.unpaid} ({social.rentArrears})</p>}
+ <button onClick={()=>onState(payRent(state))} disabled={state.wallet<210||state.day<social.housingPaidThrough||state.housingStatus==='owned'}>{t.pay}</button>
+ <p>{lang==='cs'?'Energie a služby':'Nebenkosten'}: {state.utilitiesDue.toFixed(2)} €</p>
+ <button disabled={state.utilitiesDue<=0||state.wallet<state.utilitiesDue} onClick={()=>onState(payUtilities(state))}>{lang==='cs'?'Zaplatit energie':'Nebenkosten bezahlen'}</button>
+ </div>}
+ {state.place==='train'&&<div className="life-object railway-panel"><h4>🚉 {lang==='cs'?'Vlakové spojení':'Zugverbindungen'}</h4>
+ <p>{lang==='cs'?'Dovolená':'Urlaub'}: {state.vacationDays} {lang==='cs'?'dní':'Tage'}</p>
+ {!state.onHoliday?destinations.map(d=><div className="shop-item" key={d.id}><span><strong>{d[lang]}</strong> · {d.minutes} min<br/>{lang==='cs'?'Jízdenka':'Fahrkarte'} {d.ticket} € + {lang==='cs'?'hotel':'Hotel'} {d.hotel} € · 2 {lang==='cs'?'dny volna':'Urlaubstage'}</span>
+ <button disabled={state.wallet<d.ticket+d.hotel||state.vacationDays<2} onClick={()=>onState(travelToCity(state,d.id))}>{lang==='cs'?'Odjet':'Abfahren'}</button></div>):<button disabled={state.wallet<29} onClick={()=>onState(returnFromHoliday(state))}>{lang==='cs'?'Vrátit se domů (29 €)':'Zurück nach Hause (29 €)'}</button>}
+ </div>}
  {state.place==='outfitter'&&<div className="life-object"><h4>🧥 {t.store}</h4>{gearItems.map(item=><div className="shop-item" key={item.id}><span>{item[lang]} · {item.price} €</span><button disabled={social.wardrobe.includes(item.id)||state.wallet<item.price} onClick={()=>onState(buyGear(state,item.id))}>{social.wardrobe.includes(item.id)?t.owned:t.buy}</button></div>)}</div>}
  {state.place==='mountains'&&<div className="life-object"><h4>⛰ {t.trip}</h4><button disabled={!social.wardrobe.includes('hiking')||!social.wardrobe.includes(gearFor(state.day))||state.life.energy<30} onClick={()=>onState(dayTrip(state))}>{t.hike}</button></div>}
  {state.place==='park'&&<div className="life-object"><h4>🌳 {lang==='cs'?'Aktivity v parku':'Aktivitäten im Park'}</h4>

@@ -5,6 +5,8 @@ import {defaultSocial,developBond,applyNewDay,type SocialState} from './social';
 import {contextualOptions,contextualResponse} from './dialogue';
 import {isVenueOpen} from './seasonal';
 import {restaurantCast,initialRestaurantStory,type RestaurantStory,foodTrouble} from './restaurantStory';
+import {nextUnusedFact} from './facts';
+import {weatherAt} from './weather';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom'|'contact'|'flirt'|'invite';
 export type Turn={role:'player'|'npc';cs:string;de:string;raw?:string};
@@ -30,21 +32,21 @@ export type TownState={
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
- completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;
+ completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;factsSeen:string[];lastFactDay:number;
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
  version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
  discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
- completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory()
+ completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory(),factsSeen:[],lastFactDay:-1
 };}
 export function restoreTown(raw:unknown):TownState{
  const freshState=initialTown();
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
  if(v.version!==5&&v.version!==6&&v.version!==7&&v.version!==8)return freshState;
- return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})}};
+ return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})},factsSeen:v.factsSeen??[],lastFactDay:v.lastFactDay??-1};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
@@ -67,17 +69,33 @@ export function callRestaurantStaff(s:TownState,role:'chef'|'owner'):TownState{
  return {...s,restaurantStory:{...s.restaurantStory,ownerCalled:true},minute:s.minute+5};
 }
 export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].includes(to)&&s.discovered.includes(to)&&isVenueOpen(to,s.day));
+// Travel always takes time when changing locations, including clicking an already-discovered map pin.
+export function travelMinutes(from:Place,to:Place,day:number):number{
+ if(from===to)return 0;
+ const far=new Set<Place>(['mountains','resort','hotel','pool']);
+ const distant=far.has(from)||far.has(to);
+ const nearby=new Set<Place>(['square','street','bakery','cafe','library','bank','theatre','restaurant']);
+ const close=nearby.has(from)&&nearby.has(to);
+ const base=distant?28:close?7:13;
+ const kind=weatherAt(day).kind;
+ return base+(kind==='storm'?8:kind==='rain'||kind==='snow'?4:0);
+}
+function moveTo(s:TownState,to:Place):TownState{
+ if(to===s.place)return s;
+ const n=addTime(s,travelMinutes(s.place,to,s.day));
+ return {...n,place:to,selectedNpc:null};
+}
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
- const next=addTime(s,6);return {...next,place:to,selectedNpc:null};
+ return moveTo(s,to);
 }
 export function fastTravel(s:TownState,to:Place):TownState{
  if(!s.discovered.includes(to)||!isVenueOpen(to,s.day))return s;
- const n=addTime(s,12);return {...n,place:to,selectedNpc:null};
+ return moveTo(s,to);
 }
 export function goRecommended(s:TownState,to:Place):TownState{
  if(!s.recommended.includes(to)||!s.discovered.includes(to)||!isVenueOpen(to,s.day))return go(s,to);
- const n=addTime(s,12);return {...n,place:to,selectedNpc:null};
+ return moveTo(s,to);
 }
 const pair=(cs:string,de:string)=>({cs,de});
 export function note(s:TownState,cs:string,de:string):TownState{return {...s,journal:{cs:[...s.journal.cs,cs],de:[...s.journal.de,de]}};}
@@ -390,6 +408,12 @@ export function read(s:TownState,kind:'book'|'web'):TownState{
  if(s.place!=='library'||(kind==='book'?s.lastRead:s.lastResearch)===s.day)return s;
  const gain=kind==='book'?3:2,mission=kind==='book'?'read':'research';
  return {...s,mindset:s.mindset+gain,minute:s.minute+25,[kind==='book'?'lastRead':'lastResearch']:s.day,completed:[...new Set([...s.completed,mission])]};
+}
+export function revealNewFact(s:TownState):{state:TownState;factId:string|null}{
+ if(!quizzes.every(q=>s.completedQuiz.includes(q.id))||s.lastFactDay===s.day)return {state:s,factId:null};
+ const fact=nextUnusedFact(s.factsSeen,s.day);
+ if(!fact)return {state:s,factId:null};
+ return {state:{...s,factsSeen:[...s.factsSeen,fact.id],lastFactDay:s.day},factId:fact.id};
 }
 export function solve(s:TownState,q:Quiz,answer:number):TownState{
  if(s.completedQuiz.includes(q.id))return s;

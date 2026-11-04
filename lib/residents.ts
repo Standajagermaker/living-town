@@ -1,6 +1,6 @@
 import type {Place} from './game';
 export type ResidentMood='calm'|'cheerful'|'stressed'|'tired'|'irritable'|'curious';
-export type Resident={id:string;name:string;age:number;temperament:'warm'|'reserved'|'eccentric'|'skeptical'|'bold'|'shy';trait:number;humor:number;empathy:number;job:Place|null;sideJob:Place|null;homeDistrict:number;vacationStart:number;vacationLength:number;weekendWorker:boolean;interests:string[];portrait:string};
+export type Resident={id:string;name:string;age:number;temperament:'warm'|'reserved'|'eccentric'|'skeptical'|'bold'|'shy';trait:number;humor:number;empathy:number;job:Place|null;sideJob:Place|null;homeDistrict:number;vacationStart:number;vacationLength:number;weekendWorker:boolean;officeRole?:'boss'|'overtime'|'remote'|'staff';interests:string[];portrait:string};
 const first=['Anton','Mira','Nora','Felix','Hanna','Leon','Klara','Emil','Greta','Theo','Lina','Oskar','Maja','Jonas','Romy','Bruno','Elisa','Tobias','Ida','Karl','Silvia','Juno','Matteo','Vera','Anika','Paul','Amira','Gregor','Sina','Rafael','Nina','Max','Elena','Moritz','Yara','Benedikt','Frida','David','Lotte','Samir','Kira','Arno','Cleo','Tim','Marlene','Milan','Rosa','Hugo','Tara','Vincent'];
 const last=['Bauer','Keller','Neumann','Vogel','Schuster','Berger','Wolf','Kraus','Fischer','Lang','Richter','Seidel','Herzog','Kuhn','Ott','Lenz','Winkler','Graf','Hartmann','Beck','Urban','Brunner','Lindner','Weiss','Hofer'];
 const types:Resident['temperament'][]=['warm','reserved','eccentric','skeptical','bold','shy'];
@@ -50,7 +50,7 @@ export const residents:Resident[]=first.map((name,i)=>({
  job:(['bakery','work','library','square','work','bakery','work','square','library','work'] as Place[])[i%10],
  sideJob:i%5===0?'bakery':i%7===0?'library':i%9===0?'square':null,
  homeDistrict:i%6,vacationStart:(i*11+24)%85,vacationLength:3+i%9,
- weekendWorker:i%3===0||i%5===0,interests:residentInterests(i),portrait:['🧑','👩','👨','👩‍🦰','🧔','👱‍♀️','👨‍🦳','👩‍🦳','🧑‍🦱','👨‍🦰'][i%10]
+ weekendWorker:i%3===0||i%5===0,officeRole:i===4?'boss':i===6?'overtime':i===9?'remote':i%10===4||i%10===6||i%10===9?'staff':undefined,interests:residentInterests(i),portrait:['🧑','👩','👨','👩‍🦰','🧔','👱‍♀️','👨‍🦳','👩‍🦳','🧑‍🦱','👨‍🦰'][i%10]
 }));
 export const byId=(id:string)=>residents.find(r=>r.id===id);
 function hash(n:number){return ((n*1103515245+12345)>>>0)%10000;}
@@ -67,7 +67,20 @@ export function moodOf(r:Resident,day:number,minute:number):ResidentMood{
 export function placeFor(r:Resident,day:number,minute:number):Place{
  const hour=Math.floor((minute%1440)/60),dow=day%7;
  const vacation=day%90>=r.vacationStart&&day%90<r.vacationStart+r.vacationLength;
- const shift=vacation?null:(r.sideJob&&dow===6?r.sideJob:(dow>=2&&dow<=6||r.weekendWorker)?r.job:null);
+ const officeRole=r.job==='work'?r.officeRole:undefined;
+ // Office is a weekday workplace. Nobody gets an automatic weekend shift.
+ // Boss occasionally checks in on Saturdays, and the IT enthusiast often stays late.
+ if(officeRole==='remote'){
+  // A colleague permanently works from a home computer: visible in messages, never in the office.
+  if(hour>=8&&hour<20&&dow>=2)return 'home';
+ }else if(officeRole==='boss'&&!vacation){
+  if((dow>=2&&dow<=6&&minute>=7*60+45&&minute<17*60)||(dow===0&&(Math.floor(day/7)+r.trait)%3===0&&minute>=10*60&&minute<12*60+30))return 'work';
+ }else if(officeRole==='overtime'&&!vacation){
+  if(dow>=2&&dow<=6&&minute>=7*60+30&&minute<20*60+30)return 'work';
+ }else if(officeRole==='staff'&&!vacation){
+  if(dow>=2&&dow<=6&&minute>=8*60&&minute<16*60+30)return 'work';
+ }
+ const shift=vacation?null:r.job==='work'?null:(r.sideJob&&dow===6?r.sideJob:(dow>=2&&dow<=6||r.weekendWorker)?r.job:null);
  if(shift&&hour>=8+(r.age%3)&&hour<15+(r.age%5))return shift;
  const interest=currentAppointment(r,day,minute);
  if(interest)return interest.place;

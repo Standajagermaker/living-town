@@ -57,7 +57,7 @@ export default function Page(){
     <div className="section-head"><div><small>{tx.location.toUpperCase()}</small><h1>{tx[game.place]}</h1></div><span className="chip">{tx.location} · {game.day+1}</span></div>
     {game.place==='work'||game.place==='library'||game.place==='square'?<div className={'placeview '+game.place}><div className="placeview-icon">{locationIcon[game.place]}</div><h2>{tx[game.place]}</h2><p>{desc}</p></div>:<Scenery place={game.place} go={navigate} talk={approach} manLeft={false}/>}
     <div className="actions">{npc&&<button onClick={approach}>💬 {mem?.closed?tx.meet:tx.resume}: {npcName}</button>}
-    {game.place==='work'&&<button disabled={game.employment==='fired'||game.day<2||game.day%7>6||game.dayLastWorked===game.day} onClick={()=>{setGame(s=>workShift(s));setTab('world');}}>💼 {tx.shift}</button>}
+    {game.place==='work'&&<button disabled={game.employment==='fired'||game.day%7<2||game.dayLastWorked===game.day} onClick={()=>{setGame(s=>workShift(s));setTab('world');}}>💼 {tx.shift}</button>}
     {game.place==='library'&&<><button onClick={()=>{setReading('read');setTab('world')}}>📖 {tx.read}</button><button onClick={()=>{setReading('research');setTab('world')}}>🌐 {tx.research}</button></>}
     {game.place==='home'&&<button onClick={()=>setGame(s=>nextDay(s))}>🌙 {tx.sleep}</button>}
     {game.place!=='street'&&<button onClick={()=>navigate('street')}>↩ {tx.back}</button>}

@@ -19,7 +19,7 @@ const blank=():DialogueMemory=>({asked:[],topic:null,turns:0,repeats:0,closed:tr
 const roster:NpcId[]=['neighbor','baker','boss','librarian'];
 export const initialState:GameState={
  place:'home',minute:630,day:0,wallet:85,mindset:12,
- discovered:['home','street','work'],recommendations:[],knownNames:[],
+ discovered:['home','street','work','bakery'],recommendations:[],knownNames:[],
  conversations:{neighbor:blank(),baker:blank(),boss:blank(),librarian:blank()},
  completedGoals:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  notifications:{cs:['Nový domov. Nová práce. Nové možnosti.'],de:['Neues Zuhause. Neuer Job. Neue Möglichkeiten.']},
@@ -63,7 +63,8 @@ export const routes:Record<Place,Place[]>={home:['street'],street:['home','baker
 export function canTravel(s:GameState,p:Place){return s.place===p||routes[s.place].includes(p)&&s.discovered.includes(p);}
 export function move(s:GameState,p:Place,lang:Lang):GameState{
  if(!canTravel(s,p))return s;
- return {...s,place:p,minute:s.minute+5,journal:{...s.journal,[lang]:[...s.journal[lang],(lang==='cs'?'Navštíveno: ':'Besucht: ')+p]}};
+ const names:Record<Place,[string,string]>={home:['Domov','Zuhause'],street:['Ulice','Straße'],bakery:['Pekárna','Bäckerei'],square:['Náměstí','Marktplatz'],work:['Práce','Arbeit'],library:['Knihovna','Bibliothek']};
+ return {...s,place:p,minute:s.minute+5,journal:{cs:[...s.journal.cs,'Navštíveno: '+names[p][0]],de:[...s.journal.de,'Besucht: '+names[p][1]]}};
 }
 export function begin(s:GameState,lang:Lang):GameState{
  const npc=npcAt(s.place);if(!npc)return s;const m=memory(s,npc);
@@ -96,6 +97,8 @@ export function options(s:GameState,lang:Lang):Choice[]{
   add('custom-ok-'+m.turns,'generic','genericOk');
  }
  if(m.turns>0)add('thanks-'+m.turns,'thanks');
+ // Always offer a fresh, open-ended topic on returning; this is not a repeated question.
+ if(m.turns>0)add('catchup-'+m.turns,'generic',(['genericMore','genericWhy','genericOk'][m.turns%3]));
  const selected=offered.slice(0,4);
  selected.push({id:'exit',topic:'bye',text:prompts[lang].bye});
  return selected;
@@ -154,7 +157,7 @@ export function interact(s:GameState,text:string,lang:Lang,choice?:Choice):GameS
   }
  }
  const asked=topic==='generic'||topic==='bye'||topic==='thanks'||repeated?m.asked:[...m.asked,id];
- const mem:DialogueMemory={...m,asked,topic,turns:m.turns+1,repeats,closed,history:[...m.history,{who:'player',text},{who:'npc',text:response,translations:{cs:say('cs',responseKey),de:say('de',responseKey)}}]};
+ const mem:DialogueMemory={...m,asked,topic:topic==='bye'?m.topic:topic,turns:m.turns+1,repeats,closed,history:[...m.history,{who:'player',text},{who:'npc',text:response,translations:{cs:say('cs',responseKey),de:say('de',responseKey)}}]};
  return {...started,minute:started.minute+2,wallet,mindset,discovered,recommendations,knownNames,completedGoals:[...goals],journal,conversations:{...started.conversations,[npc]:mem}};
 }
 export function study(s:GameState,kind:'read'|'research',lang:Lang):GameState{

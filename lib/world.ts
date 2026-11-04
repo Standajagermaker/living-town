@@ -4,6 +4,7 @@ import {initialLife,addTime,eventsForDay,type LifeState} from './life';
 import {defaultSocial,developBond,applyNewDay,type SocialState} from './social';
 import {contextualOptions,contextualResponse} from './dialogue';
 import {isVenueOpen} from './seasonal';
+import {restaurantCast,initialRestaurantStory,type RestaurantStory,foodTrouble} from './restaurantStory';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom'|'contact'|'flirt'|'invite';
 export type Turn={role:'player'|'npc';cs:string;de:string;raw?:string};
@@ -29,21 +30,21 @@ export type TownState={
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
- completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];
+ completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
  version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
  discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
- completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85]
+ completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory()
 };}
 export function restoreTown(raw:unknown):TownState{
  const freshState=initialTown();
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
  if(v.version!==5&&v.version!==6&&v.version!==7&&v.version!==8)return freshState;
- return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal};
+ return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})}};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];
@@ -52,8 +53,19 @@ export const occupant=(s:TownState)=>{
  const event=eventsForDay(s.day).find(e=>e.place===s.place&&s.life.visited.includes(e.id));
  const attendees=event?event.attendees.map(byId).filter((r):r is Resident=>!!r):[];
  const outings=s.place==='mountains'&&s.minute>=8*60&&s.minute<19*60?residents.filter(r=>(Number(r.id.slice(-2))+s.day)%7===0).slice(0,5):s.place==='restaurant'&&s.minute>=11*60&&s.minute<21*60?residents.filter(r=>(Number(r.id.slice(-2))+s.day)%9===0).slice(0,4):[];
- return [...new Map([...regular,...attendees,...outings].map(r=>[r.id,r])).values()];
+ const staff=s.place==='restaurant'?[
+  ...(s.restaurantStory?.chefCalled?[byId(restaurantCast.chef)]:[]),
+  ...(s.restaurantStory?.ownerCalled?[byId(restaurantCast.owner)]:[])
+ ].filter((r):r is Resident=>Boolean(r)):[];
+ return [...new Map([...regular,...attendees,...outings,...staff].map(r=>[r.id,r])).values()];
 };
+export function callRestaurantStaff(s:TownState,role:'chef'|'owner'):TownState{
+ if(s.place!=='restaurant'||s.minute<11*60||s.minute>=22*60)return s;
+ if(role==='chef'){
+  return {...s,restaurantStory:{...s.restaurantStory,chefCalled:true},minute:s.minute+3};
+ }
+ return {...s,restaurantStory:{...s.restaurantStory,ownerCalled:true},minute:s.minute+5};
+}
 export const canGo=(s:TownState,to:Place)=>s.place===to||(links[s.place].includes(to)&&s.discovered.includes(to)&&isVenueOpen(to,s.day));
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
@@ -89,7 +101,12 @@ export function startConversation(s:TownState,id:string):TownState{
  openerOptions[(Number(id.slice(-2))*7+s.day*11+prior.visits*3)%openerOptions.length]):first;
  const mood=moodOf(r,s.day,s.minute);
  const venue= s.place;
- const placePrompt=venue==='bakery'?(
+ const restaurantRole=id===restaurantCast.waitress?'waitress':id===restaurantCast.chef?'chef':id===restaurantCast.owner?'owner':null;
+ const placePrompt=venue==='restaurant'&&restaurantRole?(
+ restaurantRole==='waitress'?pair('Dobrý den, dáte si něco k jídlu, nebo se chcete nejprve podívat na nabídku?','Guten Tag. Möchten Sie etwas essen oder erst die Speisekarte sehen?'):
+ restaurantRole==='chef'?pair('Volali jste mě? Je něco v nepořádku s jídlem?','Sie haben mich rufen lassen? Stimmt etwas mit dem Essen nicht?'):
+ pair('Dobrý den, jsem majitel. Potřebujete něco vyřešit?','Guten Tag, ich bin der Inhaber. Kann ich Ihnen helfen?')
+ ):venue==='bakery'?(
     (s.minute%180<80)?pair('Pane, dnes máme fofr. Vyberte si prosím, co to bude?','Heute ist viel los! Bitte entscheiden Sie sich. Was darf es sein?'):
     pair('Dobrý den, co to bude? Máme čerstvé preclíky a chléb.','Guten Tag! Was darf es sein? Wir haben frische Brezeln und Brot.')
   ):venue==='work'?(
@@ -103,7 +120,7 @@ export function startConversation(s:TownState,id:string):TownState{
  const bond=s.social?.bonds[id];
  const away=!!currentAppointment(r,s.day,s.minute);
  const reluctant=(mood==='irritable'||mood==='stressed'||mood==='tired')&&(r.trait+s.day*7)%5<=2;
- const refuses=venue==='bakery'||venue==='work'||venue==='library'?false:(bond?.warmth??0)<-12||(reluctant&&prior.visits===0);
+ const refuses=venue==='restaurant'||venue==='bakery'||venue==='work'||venue==='library'?false:(bond?.warmth??0)<-12||(reluctant&&prior.visits===0);
  const line=refuses
   ?pair(away?'Promiň, teď mám svoje plány. Rád si je nechám pro sebe. Měj se!':'Omlouvám se, dnes nemám chuť si povídat. Měj se!','Tut mir leid, ich habe gerade eigene Pläne und möchte sie für mich behalten. Bis dann!')
   :prompt;
@@ -162,7 +179,21 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  const unused=all.filter(c=>c.id==='contact'||!m.asked.includes(c.id));
  const hello=m.turns.length<=1?[{id:'new-here',topic:'hello' as Topic,cs:'Ano, právě jsem se přistěhoval.',de:'Ja, ich bin gerade hergezogen.'},{id:'hello-day',topic:'hello' as Topic,cs:'Zatím se rozkoukávám. A co ty?',de:'Ich schaue mich noch um. Und wie geht es Ihnen?'}]:[];
  const npcQuestion=lastNpc&&/\?/.test(lastNpc[lang]);
- const venueTopics:Answer[]=s.place==='work'?[
+ const restaurantAnswers:Answer[]=s.place==='restaurant'?(
+ id===restaurantCast.waitress?[
+  {id:'rest-menu-'+m.turns.length,topic:'followup',cs:'Nejdřív si prohlédnu nabídku.',de:'Ich sehe mir erst die Speisekarte an.'},
+  {id:'rest-dinner-'+m.turns.length,topic:'followup',cs:'Rád bych se tu najedl.',de:'Ich würde gern etwas essen.'},
+  {id:'rest-staff-'+m.turns.length,topic:'followup',cs:'Kdo dnes vaří?',de:'Wer kocht heute?'}
+ ]:id===restaurantCast.chef?[
+  {id:'rest-complain-'+m.turns.length,topic:'followup',cs:'Jídlo bylo dnes přesolené.',de:'Das Essen war heute versalzen.'},
+  {id:'rest-calm-'+m.turns.length,topic:'followup',cs:'Chtěl jsem se jen zeptat, co doporučujete.',de:'Ich wollte nur fragen, was Sie empfehlen.'},
+  {id:'rest-chef-good-'+m.turns.length,topic:'followup',cs:'Jídlo mi chutnalo, děkuju.',de:'Das Essen hat mir geschmeckt, danke.'}
+ ]:[
+  {id:'rest-owner-service-'+m.turns.length,topic:'followup',cs:'Rád bych s vámi probral obsluhu.',de:'Ich würde gern über den Service sprechen.'},
+  {id:'rest-owner-hello-'+m.turns.length,topic:'followup',cs:'Jen jsem vás chtěl pozdravit.',de:'Ich wollte nur Hallo sagen.'},
+  {id:'rest-owner-staff-'+m.turns.length,topic:'followup',cs:'Máte tu zajímavý tým.',de:'Sie haben ein interessantes Team.'}
+ ]):[];
+ const venueTopics:Answer[]=restaurantAnswers.length?restaurantAnswers:s.place==='work'?[
  {id:'work-tasks',topic:'job',cs:'Mám připravené dnešní úkoly.',de:'Ich habe meine Aufgaben vorbereitet.'},
  {id:'work-help',topic:'job',cs:'Potřeboval bych poradit s jedním úkolem.',de:'Ich brauche bei einer Aufgabe einen Rat.'},
  {id:'work-break',topic:'followup',cs:'Jak řešíš pracovní přestávky?',de:'Wie machst du deine Arbeitspausen?'}
@@ -249,7 +280,19 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
   'book-chat':pair('Občas. Ale dnes mi nějak chybí soustředění. Co jsi četl?','Manchmal. Heute fehlt mir aber die Konzentration. Was hast du gelesen?'),
   'work-chat':pair('To znám. Někdy stačí jeden kolega a hned je o zábavu postaráno.','Das kenne ich. Manchmal reicht ein Kollege für ordentlich Unterhaltung.')
  };
- const contextualChoice=(choice&&livedReplies[choice.id])||(choice?contextualResponse(choice.id):null);
+ const venueReaction:Record<string,{cs:string;de:string}>={
+ 'rest-menu':pair('Jistě, dejte si čas. Dnes máme i domácí specialitu.','Natürlich, nehmen Sie sich Zeit. Heute gibt es auch eine Hausspezialität.'),
+ 'rest-dinner':pair('Výborně, hned vám přinesu menu.','Sehr gern, ich bringe gleich die Speisekarte.'),
+ 'rest-staff':pair('Dnes vaří Hugo. Je šikovný, jen poslední dobou nějak zamyšlený.','Heute kocht Hugo. Er ist gut, nur in letzter Zeit etwas nachdenklich.'),
+ 'rest-complain':s.restaurantStory.mealComplaint?pair('Máte pravdu. Omlouvám se. Poslední dobou nemám hlavu u vaření. Víte, někdy se člověk zamiluje do někoho, kdo už s někým je...','Sie haben recht. Entschuldigung. Meine Gedanken sind derzeit woanders. Manchmal verliebt man sich in jemanden, der schon vergeben ist...'):pair('Mrzí mě to, příště si dám větší pozor.','Das tut mir leid. Nächstes Mal passe ich besser auf.'),
+ 'rest-calm':pair('Naše dnešní specialita je houbové rizoto.','Unsere Spezialität heute ist Pilzrisotto.'),
+ 'rest-chef-good':pair('To rád slyším. Dneska pro mě taková slova hodně znamenají.','Das freut mich. Heute bedeutet mir so etwas viel.'),
+ 'rest-owner-service':pair('Děkuji za upozornění, záleží mi na tom, aby se tu hosté cítili dobře.','Danke für die Rückmeldung. Mir ist wichtig, dass Gäste sich hier wohlfühlen.'),
+ 'rest-owner-hello':pair('Těší mě. Užijte si večer.','Freut mich. Genießen Sie den Abend.'),
+ 'rest-owner-staff':pair('Jsou to dobří lidé. Někdy je ale těžké oddělit práci od soukromí.','Es sind gute Leute. Manchmal ist es aber schwer, Arbeit und Privates zu trennen.')
+ };
+ const choicePrefix=choice?.id.replace(/-\d+$/,'')??'';
+ const contextualChoice=(choice&&(venueReaction[choicePrefix]??livedReplies[choice.id]))||(choice?contextualResponse(choice.id):null);
  const key=contextualChoice??(topic==='custom'?variants[stableHash(input+r.id+m.turns.length)%variants.length]:responses[topic]);
  const boss=id==='npc-02'&&s.place==='work'&&topic==='advice';
  const bossIrritable=(s.day*11+s.minute*3)%5<3;

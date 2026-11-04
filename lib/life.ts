@@ -92,8 +92,16 @@ export function attendEvent(s:TownState,event:TownEvent):TownState{
  if(!entry||entry.status==='attended'||event.day!==s.day||s.minute>event.end)return s;
  const n=addTime(s,Math.max(8,event.start-s.minute));
  const end=addTime(n,38);
+ const surprises=[
+ ['Na akci dorazil někdo v kostýmu, ačkoliv to nebyl maškarní večírek. Teď tvrdí, že to byl experiment.','Jemand erschien verkleidet, obwohl es keine Kostümparty ist. Jetzt nennt er es ein Experiment.'],
+ ['Moderátor zapomněl, koho měl uvítat. Publikum to vzalo jako improvizační komedii.','Der Moderator hat vergessen, wen er begrüßen sollte. Das Publikum hält es für Impro-Comedy.'],
+ ['Někdo přinesl dort s úplně jiným jménem. Oslavenec se rozhodl, že dnes může být kdokoliv.','Jemand brachte eine Torte mit dem falschen Namen. Das Geburtstagskind beschloss, heute jemand anderes zu sein.'],
+ ['Hudba začala o deset minut dřív. Organizátor trvá na tom, že jde o časový experiment.','Die Musik begann zehn Minuten zu früh. Der Veranstalter nennt das ein Zeitexperiment.']
+ ];
+ const [cs,de]=surprises[(event.day+event.start)%surprises.length];
  return {...end,place:event.place,discovered:[...new Set([...end.discovered,event.place])],
-  life:{...end.life,calendar:end.life.calendar.map(e=>e.eventId===event.id?{...e,status:'attended' as const}:e),visited:[...end.life.visited,event.id]}};
+  life:{...end.life,calendar:end.life.calendar.map(e=>e.eventId===event.id?{...e,status:'attended' as const}:e),visited:[...end.life.visited,event.id]},
+  journal:{cs:[...end.journal.cs,cs],de:[...end.journal.de,de]}};
 }
 export function lookAround(s:TownState):TownState{
  if(s.place!=='street'&&s.place!=='square')return s;
@@ -102,7 +110,16 @@ export function lookAround(s:TownState):TownState{
  const next=addTime(s,8);
  if(!available.length)return next;
  const place=available[(s.day*7+s.life.lookCount*3+s.minute)%available.length];
- return {...next,discovered:[...s.discovered,place],life:{...next.life,lookCount:s.life.lookCount+1}};
+ const moments=[
+ ['Na náměstí se honí pes za vlastním vodítkem. Jeho majitel předstírá, že to byl výcvik.','Auf dem Platz jagt ein Hund seiner eigenen Leine hinterher. Sein Besitzer behauptet, das sei Training.'],
+ ['Cyklista se chlubí novou navigací. Ta ho právě potřetí poslala kolem stejné kašny.','Ein Radfahrer lobt sein neues Navi. Das schickt ihn gerade zum dritten Mal um denselben Brunnen.'],
+ ['Někdo před kavárnou převrhl ceduli „Pozor, kluzká podlaha“. Na suchý chodník.','Vor dem Café fällt ein Schild mit „Vorsicht, Rutschgefahr“ auf den völlig trockenen Gehweg.'],
+ ['Z hotelu vyšel muž s kufrem a zjistil, že právě čeká na autobusové zastávce pro pěší.','Ein Mann verlässt das Hotel mit Koffer und merkt, dass er an einer Fußgängerzone auf den Bus wartet.'],
+ ['V parku někdo cvičí jógu. Husy mají zjevně vlastní názor na jeho osobní prostor.','Im Park macht jemand Yoga. Die Gänse haben offenbar eine andere Vorstellung von persönlichem Abstand.']
+ ];
+ const [cs,de]=moments[(s.day*7+s.life.lookCount)%moments.length];
+ return {...next,discovered:[...s.discovered,place],life:{...next.life,lookCount:s.life.lookCount+1,stories:[...next.life.stories,'look-'+s.day+'-'+s.life.lookCount]},
+ journal:{cs:[...next.journal.cs,cs],de:[...next.journal.de,de]}};
 }
 export function phoneOpened(s:TownState):TownState{
  if(s.place!=='work')return s;

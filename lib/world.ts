@@ -259,7 +259,32 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  hello:pair('Vítej tady. Město je malé, ale občas překvapí víc než velkoměsto.','Willkommen! Die Stadt ist klein, überrascht aber manchmal mehr als eine Großstadt.'),
  name:pair('Jmenuji se '+r.name+'. A ty?','Ich heiße '+r.name+'. Und Sie?'),
  about:privacyDecline?pair('Nezlob se, o tom dnes nechci mluvit.','Entschuldige, darüber möchte ich heute nicht sprechen.'):pair('Zatím se tu mám docela dobře. Uvidíme, co přinese další týden.','Bisher gefällt es mir hier ganz gut. Mal sehen, was nächste Woche bringt.'),
- job:pair('Pracuji hlavně v '+placeNames[r.job??'square'].cs.toLowerCase()+(r.sideJob?' a občas mám druhou práci.':'.'),'Ich arbeite meistens bei '+placeNames[r.job??'square'].de+(r.sideJob?' und habe gelegentlich einen Nebenjob.':'.')),
+ job:(()=>{
+  // Never form Czech prepositional case by lowercasing a nominative location name.
+  const jobPhrases:Record<Place,{cs:string;de:string}>={
+   home:{cs:'Pracuju převážně z domova.',de:'Ich arbeite hauptsächlich von zu Hause.'},
+   street:{cs:'Pracuju převážně v terénu.',de:'Ich arbeite überwiegend im Außendienst.'},
+   bakery:{cs:'Pracuju v pekárně.',de:'Ich arbeite in einer Bäckerei.'},
+   square:{cs:'Pracuju v centru města.',de:'Ich arbeite im Stadtzentrum.'},
+   work:{cs:'Pracuju v kanceláři.',de:'Ich arbeite im Büro.'},
+   library:{cs:'Pracuju v knihovně.',de:'Ich arbeite in der Bibliothek.'},
+   market:{cs:'Pracuju v supermarketu.',de:'Ich arbeite im Supermarkt.'},
+   cafe:{cs:'Pracuju v kavárně.',de:'Ich arbeite in einem Café.'},
+   park:{cs:'Pracuju ve správě parku.',de:'Ich arbeite in der Parkverwaltung.'},
+   church:{cs:'Pracuju v místní farnosti.',de:'Ich arbeite in der örtlichen Gemeinde.'},
+   hotel:{cs:'Pracuju v hotelu.',de:'Ich arbeite in einem Hotel.'},
+   gym:{cs:'Pracuju ve fitness centru.',de:'Ich arbeite in einem Fitnessstudio.'},
+   mountains:{cs:'Pracuju v horském středisku.',de:'Ich arbeite in einem Bergsportzentrum.'},
+   restaurant:{cs:'Pracuju v restauraci.',de:'Ich arbeite in einem Restaurant.'},
+   outfitter:{cs:'Pracuju v obchodě se sportovním vybavením.',de:'Ich arbeite in einem Sportgeschäft.'},
+   pool:{cs:'Pracuju na plovárně.',de:'Ich arbeite im Freibad.'},
+   resort:{cs:'Pracuju v lyžařském středisku.',de:'Ich arbeite in einem Skigebiet.'},
+   bank:{cs:'Pracuju v bance.',de:'Ich arbeite in einer Bank.'},
+   theatre:{cs:'Pracuju v divadle.',de:'Ich arbeite im Theater.'}
+  };
+  const phrase=jobPhrases[r.job??'square'];
+  return pair(phrase.cs+(r.sideJob?' Občas mám ještě druhou práci.':''),phrase.de+(r.sideJob?' Gelegentlich habe ich noch einen Nebenjob.':''));
+ })(),
  advice:pair('Zkus náměstí a knihovnu. Někdy tam narazíš na zajímavé lidi.','Schauen Sie sich den Marktplatz und die Bibliothek an. Dort trifft man interessante Leute.'),
  event:pair('Něco se určitě děje. Mrkni do městského kalendáře.','Bestimmt ist etwas los. Schau im Stadtprogramm nach.'),
  hobby:hobbyReply,

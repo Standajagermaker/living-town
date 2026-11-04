@@ -4,6 +4,7 @@ import {initialTown,restoreTown,clock,dayLabel,placeNames,links,go,canGo,startCo
 import {ArtTown,StreetView,landmarks,glyph} from './TownArt';
 import {Interaction,Quizzes,Missions,Phone} from './Interaction';
 import './world.css';
+import './panels.css';
 const VERSION='v0.5.0',SAVE='living-town-v0.5';
 type Panel='town'|'dialogue'|'phone'|'missions'|'quiz'|'people';
 const ui={
@@ -28,8 +29,8 @@ export default function Page(){
  function farewell(){setState(s=>exitConversation(s));setPanel('town');}
  async function send(input:string,choice?:Answer){
   const id=state.selectedNpc;if(!id||busy||!input.trim())return;
-  setBusy(true);let generated:undefined|string;
-  try{const response=await fetch('/api/dialogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,lang,text:input,topic:choice?.topic,day:state.day,minute:state.minute,history:state.conversations[id]?.turns.slice(-10)??[]})});if(response.ok){const data=await response.json();if(typeof data.text==='string')generated=data.text;}}catch{}
+  setBusy(true);let generated:undefined|{cs:string;de:string};
+  try{const response=await fetch('/api/dialogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,lang,text:input,topic:choice?.topic,day:state.day,minute:state.minute,history:state.conversations[id]?.turns.slice(-10)??[]})});if(response.ok){const data=await response.json();if(typeof data.cs==='string'&&typeof data.de==='string')generated={cs:data.cs,de:data.de};}}catch{}
   setState(s=>reply(s,input,lang,choice,generated));setBusy(false);
  }
  function reset(){if(confirm(t.resetConfirm)){setState(initialTown());setPanel('town');setReading(null);setSeason(0);}}

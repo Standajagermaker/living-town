@@ -21,7 +21,7 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
  {place:'market',x:71,y:58},{place:'cafe',x:60,y:52},{place:'park',x:81,y:66},
  {place:'church',x:59,y:30},{place:'hotel',x:17,y:54},{place:'gym',x:86,y:24},
  {place:'mountains',x:72,y:18},{place:'restaurant',x:43,y:49},{place:'outfitter',x:24,y:59},
- {place:'pool',x:19,y:33},{place:'resort',x:86,y:13}
+ {place:'pool',x:19,y:33},{place:'resort',x:86,y:13},{place:'bank',x:69,y:72}
 ];
 export function StreetView({place,lang,season,hour=12}:{place:Place;lang:Lang;season:number;hour?:number}){
  const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work'};

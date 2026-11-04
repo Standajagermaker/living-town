@@ -1,66 +1,34 @@
-# Living Town – pilot 001
+# Living Town – Pilot 004
 
-**Hratelný první den** v nově založeném městečku. Mobilní Next.js aplikace v češtině, s jednoduchými německými dialogy. Bez poplatků za AI: odpovědi zatím poskytuje lokální pravidlový engine.
+Interaktivní prototyp společenského městečka v **češtině a němčině**, vytvořený v Next.js. Stav se ukládá lokálně v prohlížeči (localStorage). AI dialogy, společný serverový svět a multiplayer **zatím nejsou připojeny**.
 
-## Co už funguje
-- Scéna před domem s krabicemi, mužem se psem a pekárnou.
-- Klikací postavy a budovy, dialogové volby a vlastní text.
-- Lokální herní čas, pohyb mezi lokacemi, mapa s neobjeveným náměstím.
-- Telefon: oznámení, kontakty a deník.
-- Stav se ukládá do `localStorage` aktuálního prohlížeče.
-- SQL migrace pro budoucí sdílený svět a bezpečné soukromé údaje.
+## Co lze hrát
 
-**Zatím NEfunguje:** skutečný multiplayer, nepřetržité autonomní NPC, autentizace, generativní AI a cloudová synchronizace. Ty vyžadují serverové API a další vývoj. Nejde o hotovou multiplayerovou hru.
+- Začínáš doma; od začátku máš známé zaměstnání. Před domem je ulice, soused se psem a pekárna.
+- Horní navigace je stále viditelná a ukazuje současnou lokaci a dostupné cesty. Z interiérů lze vyjít na ulici.
+- Každé NPC má vlastní historii rozhovorů; další setkání navazuje na předchozí informace. Slušné rozloučení lze zvolit vždy během dialogu. Po opakování stejné otázky postava reaguje na opakování.
+- Otázky ve volbách se po položení skryjí. Po vlastní textové zprávě se nabídnou návazné reakce. Neznámé formulace mají variabilní, **pravidlové** reakce; nejedná se o plnohodnotné porozumění AI.
+- Osobní mapa odkrývá známé lokace včetně míst doporučených během rozhovoru.
+- Aktivity odemykají mise. V knihovně lze číst krátký text o naslouchání nebo o posuzování informačních zdrojů, což po dočtení přidá Mindset (maximálně jednou za herní den pro každý typ aktivity).
+- Peněženka (začátek 85 €), nákup preclíku (2,50 €), práce (45 € za směnu), pracovní absence, výstraha a možnost propuštění. Opakované hrubé chování vůči nadřízenému má také herní důsledky.
+- Přepínač CZ/DE mění rozhraní a připravené NPC repliky; historie NPC ukládá obě jazykové verze. Hráčův vlastní text se nepřekládá.
+- Telefon s oznámeními, kontakty a deníkem.
 
-## 1. Spuštění na počítači
-Nainstaluj Node.js 20.9+ (doporučeno Node 22). Potom:
+## Vyzkoušení
 
-```bash
-npm install
-npm run dev
-```
+1. Nainstaluj Node.js 20.9+.
+2. Spusť `npm install` a `npm run dev`.
+3. Otevři `http://localhost:3000`.
+4. Pro veřejné nasazení připoj GitHub repozitář `Standajagermaker/living-town` do Vercelu.
 
-Otevři http://localhost:3000 . Na mobilu nejdřív použij veřejné nasazení na Vercelu.
+Tato lokální verze nepotřebuje žádné API klíče. Prozatímní soubory `.env.example` a `.gitignore` jsou na GitHubu.
 
-## 2. GitHub
-1. Na github.com založ nový **soukromý** repozitář, např. `living-town`.
-2. Nahraj obsah tohoto ZIPu do kořene repozitáře (ne samotnou vnořenou složku).
-3. Soubor `.env.local` ani žádné API klíče do GitHubu nenahrávej.
+## Supabase (příprava)
 
-Případně z terminálu:
+Soubor `supabase/001_initial.sql` je počáteční návrh datového modelu, ale **frontend Pilot 004 ještě Supabase nepoužívá**. Nové lokální herní stavy (Mindset, zaměstnání, mise, individuální historie dialogů) bude třeba později promítnout i do serverového schématu. Nikdy nezveřejňuj secret/service-role klíče pod prefixem `NEXT_PUBLIC_`.
 
-```bash
-git init
-git add .
-git commit -m "Initial playable Living Town pilot"
-git branch -M main
-git remote add origin https://github.com/TVUJ-UCET/living-town.git
-git push -u origin main
-```
+## Omezení prototypu
 
-## 3. Vercel
-1. Přihlas se do Vercelu.
-2. `Add New > Project` a vyber repozitář `living-town`.
-3. Framework Next.js se rozpozná automaticky.
-4. Stiskni `Deploy`.
-5. Pro tuto první offline-verzi **nejsou potřeba žádné environment variables**.
+Všechny události a NPC jsou zatím lokálně simulované. Hra neběží sama na serveru 24/7, neobsahuje autentizaci, trvalou sdílenou databázi ani generativní LLM. Odpovědi na zcela volný text jsou variabilní podle kontextu, ale nedokážou spolehlivě pochopit libovolný význam. Pro produkční hru bude potřeba serverově řízený stav a bezpečnostní pravidla.
 
-## 4. Supabase
-1. Vytvoř samostatný projekt, např. `living-town`.
-2. Otevři `SQL Editor > New query`.
-3. Vlož celý obsah `supabase/001_initial.sql` a klikni na `Run`.
-4. V `Table Editor` uvidíš `worlds`, `locations`, `npcs`, `player_profiles`, `player_discoveries`, `npc_knowledge`, `world_events`, `dialogue_turns` a další.
-5. Tabulky se vytvoří nezávisle na aplikaci. **Aktuální frontend se k nim ještě nepřipojuje.**
-
-**Bezpečnost:** RLS je ve výchozím nastavení uzamčené, přímý přístup hráčů k soukromým NPC polím není povolen. Zápisy do herních stavů bude později provádět validující serverové API.
-
-## 5. Další implementační balík
-1. Supabase Auth (nejprve email / magic link), uživatelský profil.
-2. `POST /api/move` – serverem potvrzený pohyb a viditelnost NPC.
-3. `POST /api/dialogue` – serverová kontrola kontextu a AI generování.
-4. Supabase Realtime – sdílená přítomnost hráčů a události v okolí.
-5. Worker / cron – autonomní události 50 NPC i při nulové návštěvnosti.
-6. Samostatné tabulky pro NPC rozvrhy, vztahy, rezervace a oprávnění multiplayer chatu.
-
-## Poznámka k vizuálu
-Aktuální ulice je **jednoduchá CSS scéna**, aby šla snadno spustit a upravovat. Další krok bude nahradit ji ilustrovanými 2D/2.5D vrstvami s pohybující se kamerou, skutečnou mlhou a animacemi postav. **Žádné číslované budovy na mapě.**
+**Nasazení:** změny v tomto repozitáři samy o sobě neprokazují, že Vercel build proběhl úspěšně.

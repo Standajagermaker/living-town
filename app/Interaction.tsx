@@ -1,9 +1,10 @@
 'use client';
 import {useState} from 'react';
-import {byId,choices,quizzes,solve,residents,type TownState,type Lang,type Answer} from '../lib/world';
+import {byId,choices,quizzes,solve,revealNewFact,residents,type TownState,type Lang,type Answer} from '../lib/world';
 import {EventCalendar} from './DailyLife';
 import {SocialPhone} from './SocialUI';
 import {forecast,weatherLabel} from '../lib/weather';
+import {dailyFacts,nextUnusedFact} from '../lib/facts';
 type Props={state:TownState;lang:Lang;onState:(next:TownState)=>void;onApproach:(id:string)=>void;onExit:()=>void;onSend:(text:string,choice?:Answer)=>Promise<void>;busy:boolean};
 const tx={
  cs:{title:'Interakce s postavou',people:'Obyvatelé',dialogue:'Rozhovor',noNpc:'Oslov někoho poblíž a rozhovor začne.',your:'Vlastní odpověď',placeholder:'Napiš, co chceš opravdu říct…',send:'Odeslat',waiting:'Postava přemýšlí…',goodbye:'Rozloučit se',again:'Navázat na další rozhovor',resume:'Rozhovor navazuje na předchozí setkání.',undiscovered:'Neznámý obyvatel',silent:'Postava je právě pryč. Můžeš odejít a vrátit se jindy.',goBack:'Zpět do okolí'},
@@ -20,11 +21,38 @@ export function Interaction({state,lang,onApproach,onExit,onSend,busy}:Omit<Prop
  {m.open?<><div className="answer-list">{choices(state,lang).map(opt=><button key={opt.id} disabled={busy} className={opt.topic==='bye'?'exit-option':''} onClick={()=>opt.topic==='bye'?onExit():send(opt[lang],opt)}>{opt.topic==='bye'?'↩ ':''}{opt[lang]}</button>)}</div><label className="input-label" htmlFor="custom-reply">{t.your}</label><textarea id="custom-reply" value={draft} onChange={e=>setDraft(e.target.value)} rows={3} placeholder={t.placeholder} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')send(draft)}}/><div className="text-actions"><button disabled={!draft.trim()||busy} onClick={()=>send(draft)}>{busy?t.waiting:t.send}</button><button onClick={onExit}>{t.goodbye}</button></div></>:<button className="action-link" onClick={()=>onApproach(current.id)}>{t.again} →</button>}</>:<p className="muted-panel">{t.noNpc}</p>}</div>;
 }
 export function Quizzes({state,lang,onState}:{state:TownState;lang:Lang;onState:(s:TownState)=>void}){
- const [selected,setSelected]=useState<string|null>(null);const [feedback,setFeedback]=useState<{id:string;right:boolean}|null>(null);
+ const [selected,setSelected]=useState<string|null>(null);
+ const [feedback,setFeedback]=useState<{id:string;right:boolean}|null>(null);
+ const [factId,setFactId]=useState<string|null>(null);
  const t=lang==='cs'?{headline:'Mini kvízy a hádanky',hint:'',done:'Vyřešeno',right:'Správně! Znalost sis osvojil.',wrong:'Zatím ne. Přečti vysvětlení a zkus to znovu.',back:'Další výzva'}:{headline:'Quizfragen und Rätsel',hint:'',done:'Gelöst',right:'Richtig! Das hast du gelernt.',wrong:'Noch nicht. Lies die Erklärung und versuche es erneut.',back:'Weitere Frage'};
+ const completed=quizzes.every(q=>state.completedQuiz.includes(q.id));
  const quiz=quizzes.find(q=>q.id===selected);
- function answer(index:number){if(!quiz||state.completedQuiz.includes(quiz.id))return;const right=index===quiz.correct;setFeedback({id:quiz.id,right});if(right)onState(solve(state,quiz,index));}
- return <div className="panel-scroll"><h3>🧩 {t.headline}</h3><p>{t.hint}</p>{quiz?<><h4>{quiz[lang].question}</h4>{quiz[lang].options.map((op,i)=><button className="answer-item" onClick={()=>answer(i)} disabled={state.completedQuiz.includes(quiz.id)} key={i}>{op}</button>)}{feedback?.id===quiz.id&&<div className={'feedback '+(feedback.right?'right':'')}><strong>{feedback.right?t.right:t.wrong}</strong><p>{quiz[lang].explanation}</p></div>}<button className="action-link" onClick={()=>{setSelected(null);setFeedback(null)}}>{t.back} →</button></>:quizzes.map(q=><button className="quiz-list-item" key={q.id} onClick={()=>{setSelected(q.id);setFeedback(null)}}><span>{state.completedQuiz.includes(q.id)?'✓':'✧'}</span><span>{q[lang].question}</span></button>)}</div>;
+ const fact=dailyFacts.find(f=>f.id===factId);
+ const available=nextUnusedFact(state.factsSeen??[],state.day);
+ function showNewFact(s:TownState){const next=revealNewFact(s);onState(next.state);setFactId(next.factId);}
+ function answer(index:number){
+  if(!quiz||state.completedQuiz.includes(quiz.id))return;
+  const right=index===quiz.correct;
+  setFeedback({id:quiz.id,right});
+  if(!right)return;
+  const next=solve(state,quiz,index);
+  if(quizzes.every(q=>next.completedQuiz.includes(q.id))){setSelected(null);showNewFact(next);}
+  else onState(next);
+ }
+ return <div className="panel-scroll"><h3>🧩 {t.headline}</h3>
+ {completed?<div className="quiz-finished">
+   <h4>🎉 {lang==='cs'?'Vše splněno!':'Alles geschafft!'}</h4>
+   <p>{lang==='cs'?'Dnes jste se zase dozvěděli něco nového.':'Heute hast du wieder etwas Neues gelernt.'}</p>
+   {fact&&<div className="learning-fact"><strong>💡 {lang==='cs'?'Věděli jste, že…':'Wusstest du schon…'}</strong><p>{fact[lang]}</p></div>}
+   {!fact&&state.lastFactDay!==state.day&&available&&<button className="action-link" onClick={()=>showNewFact(state)}>{lang==='cs'?'Odhalit dnešní zajímavost':'Interessantes Tageswissen entdecken'} →</button>}
+   {!fact&&state.lastFactDay===state.day&&<p className="muted-panel">{lang==='cs'?'Dnešní zajímavost už byla odhalena. Další přijde v novém herním dni.':'Die heutige Wissenskarte wurde bereits gezeigt. Die nächste kommt an einem neuen Spieltag.'}</p>}
+   {!available&&!fact&&<p className="muted-panel">{lang==='cs'?'Všechny zajímavosti už znáš. Žádnou nebudeme opakovat.':'Du kennst bereits alle Fakten. Wir wiederholen keinen.'}</p>}
+  </div>:quiz?<><h4>{quiz[lang].question}</h4>
+   {quiz[lang].options.map((op,i)=><button className="answer-item" onClick={()=>answer(i)} disabled={state.completedQuiz.includes(quiz.id)} key={i}>{op}</button>)}
+   {feedback?.id===quiz.id&&<div className={'feedback '+(feedback.right?'right':'')}><strong>{feedback.right?t.right:t.wrong}</strong><p>{quiz[lang].explanation}</p></div>}
+   <button className="action-link" onClick={()=>{setSelected(null);setFeedback(null)}}>{t.back} →</button>
+  </>:quizzes.map(q=><button className="quiz-list-item" key={q.id} onClick={()=>{setSelected(q.id);setFeedback(null)}}><span>{state.completedQuiz.includes(q.id)?'✓':'✧'}</span><span>{q[lang].question}</span></button>)}
+ </div>;
 }
 export function Missions({state,lang}:{state:TownState;lang:Lang}){
  const tasks=[['meet','Poznej prvního obyvatele','Lerne die erste Person kennen'],['discover','Objev doporučené místo','Entdecke einen empfohlenen Ort'],['work','Odpracuj směnu','Arbeite eine Schicht'],['buy','Nakup v pekárně','Kaufe eine Brezel'],['read','Přečti knihu','Lies ein Buch'],['research','Prostuduj webový článek','Lies einen Online-Artikel']] as const;

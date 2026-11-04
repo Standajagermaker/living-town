@@ -55,6 +55,10 @@ export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
  const next=addTime(s,6);return {...next,place:to,selectedNpc:null};
 }
+export function goRecommended(s:TownState,to:Place):TownState{
+ if(!s.recommended.includes(to)||!s.discovered.includes(to))return go(s,to);
+ const n=addTime(s,12);return {...n,place:to,selectedNpc:null};
+}
 const pair=(cs:string,de:string)=>({cs,de});
 export function note(s:TownState,cs:string,de:string):TownState{return {...s,journal:{cs:[...s.journal.cs,cs],de:[...s.journal.de,de]}};}
 export function startConversation(s:TownState,id:string):TownState{

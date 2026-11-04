@@ -36,21 +36,21 @@ export type TownState={
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
  playerAge:number;ageConfirmed:boolean;stress:number;vacationDays:number;onHoliday:boolean;travelCity:'home'|'lake'|'historic'|'alps';workShifts:number;careerRank:number;monthlyBilling:number;utilitiesDue:number;housingStatus:'rented'|'warning'|'temporary'|'owned';family:{relationship:'single'|'dating'|'partner'|'married';partnerId?:string;children:number};pet:Pet|null;
- completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;factsSeen:string[];lastFactDay:number;marketVisits:number;marketEncounterResolved:number;marketLastResponse?:{cs:string;de:string};marketLastResponseVisit?:number;
+ completedQuiz:string[];lastRead:number;lastResearch:number;walletHistory:number[];restaurantStory:RestaurantStory;factsSeen:string[];lastFactDay:number;marketVisits:number;marketEncounterResolved:number;marketLastResponse?:{cs:string;de:string};marketLastResponseVisit?:number;railTalkDay:number;railTalkOutcome?:{cs:string;de:string};
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
  version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,playerAge:25,ageConfirmed:false,stress:15,vacationDays:24,onHoliday:false,travelCity:'home',workShifts:0,careerRank:0,monthlyBilling:-1,utilitiesDue:0,housingStatus:'rented',family:{relationship:'single',children:0},pet:null,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
  discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
- completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory(),factsSeen:[],lastFactDay:-1,marketVisits:0,marketEncounterResolved:-1
+ completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory(),factsSeen:[],lastFactDay:-1,marketVisits:0,marketEncounterResolved:-1,railTalkDay:-1
 };}
 export function restoreTown(raw:unknown):TownState{
  const freshState=initialTown();
  if(!raw||typeof raw!=='object')return freshState;
  const v=raw as Partial<TownState>;
  if(v.version!==5&&v.version!==6&&v.version!==7&&v.version!==8)return freshState;
- return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})},factsSeen:v.factsSeen??[],lastFactDay:v.lastFactDay??-1,marketVisits:v.marketVisits??0,marketEncounterResolved:v.marketEncounterResolved??-1,playerAge:v.playerAge??25,ageConfirmed:v.ageConfirmed??false,family:{relationship:'single',children:0,...v.family},pet:v.pet??null,stress:v.stress??15,vacationDays:v.vacationDays??24,onHoliday:v.onHoliday??false,travelCity:v.travelCity??'home',workShifts:v.workShifts??0,careerRank:v.careerRank??0,monthlyBilling:v.monthlyBilling??-1,utilitiesDue:v.utilitiesDue??0,housingStatus:v.housingStatus??'rented'};
+ return {...freshState,...v,version:8,discovered:[...new Set([...freshState.discovered,...(v.discovered??[])])],life:{...initialLife(),...(v.life??{})},social:{...defaultSocial(),...(v.social??{})},conversations:v.conversations??{},journal:v.journal??freshState.journal,restaurantStory:{...initialRestaurantStory(),...(v.restaurantStory??{})},factsSeen:v.factsSeen??[],lastFactDay:v.lastFactDay??-1,marketVisits:v.marketVisits??0,marketEncounterResolved:v.marketEncounterResolved??-1,railTalkDay:v.railTalkDay??-1,railTalkOutcome:v.railTalkOutcome,playerAge:v.playerAge??25,ageConfirmed:v.ageConfirmed??false,family:{relationship:'single',children:0,...v.family},pet:v.pet??null,stress:v.stress??15,vacationDays:v.vacationDays??24,onHoliday:v.onHoliday??false,travelCity:v.travelCity??'home',workShifts:v.workShifts??0,careerRank:v.careerRank??0,monthlyBilling:v.monthlyBilling??-1,utilitiesDue:v.utilitiesDue??0,housingStatus:v.housingStatus??'rented'};
 }
 export const clock=(m:number)=>String(Math.floor((m%1440)/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
 export const dayLabel=(day:number,lang:Lang)=>(lang==='cs'?['So','Ne','Po','Út','St','Čt','Pá']:['Sa','So','Mo','Di','Mi','Do','Fr'])[day%7];

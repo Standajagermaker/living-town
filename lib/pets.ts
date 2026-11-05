@@ -1,12 +1,13 @@
 import type {TownState,Lang} from './world';
 import {addTime} from './life';
-export type PetKind='dog'|'cat'|'fish'|'rabbit';
+export type PetKind='dog'|'cat'|'fish'|'rabbit'|'hamster';
 export type Pet={kind:PetKind;name:string;adoptedDay:number;food:number;care:number;lastFedDay:number;lastWalkDay:number;lastPlayedDay:number;};
 export const petCatalog:{id:PetKind;cs:string;de:string;adoption:number;dailyCost:number;needsWalk:boolean;}[]=[
 {id:'dog',cs:'Pes',de:'Hund',adoption:70,dailyCost:4,needsWalk:true},
 {id:'cat',cs:'Kočka',de:'Katze',adoption:55,dailyCost:3,needsWalk:false},
 {id:'fish',cs:'Akvarijní rybičky',de:'Aquarienfische',adoption:35,dailyCost:1,needsWalk:false},
-{id:'rabbit',cs:'Králík',de:'Kaninchen',adoption:45,dailyCost:2,needsWalk:false}
+{id:'rabbit',cs:'Králík',de:'Kaninchen',adoption:45,dailyCost:2,needsWalk:false},
+{id:'hamster',cs:'Křeček',de:'Hamster',adoption:28,dailyCost:1,needsWalk:false}
 ];
 export const petFoodOffer=(day:number)=>Math.round((8.75+((day*13+7)%270)/100)*100)/100;
 export function adoptPet(s:TownState,kind:PetKind,name:string):TownState{

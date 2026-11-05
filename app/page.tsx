@@ -51,7 +51,7 @@ export default function Page(){
  async function send(input:string,choice?:Answer){
   const id=state.selectedNpc;if(!id||busy||!input.trim())return;
   setBusy(true);let generated:undefined|{cs:string;de:string};
-  if(!choice)try{const response=await fetch('/api/dialogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,lang,text:input,topic:choice?.topic,playerAge:state.ageConfirmed?state.playerAge:14,day:state.day,minute:state.minute,history:state.conversations[id]?.turns.slice(-10)??[]})});if(response.ok){const data=await response.json();if(typeof data.cs==='string'&&typeof data.de==='string')generated={cs:data.cs,de:data.de};}}catch{}
+  if(!choice)try{const response=await fetch('/api/dialogue',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,lang,text:input,topic:undefined,playerAge:state.ageConfirmed?state.playerAge:14,day:state.day,minute:state.minute,history:state.conversations[id]?.turns.slice(-10)??[]})});if(response.ok){const data=await response.json();if(typeof data.cs==='string'&&typeof data.de==='string')generated={cs:data.cs,de:data.de};}}catch{}
   setState(s=>reply(s,input,lang,choice,generated));setBusy(false);
  }
  function reset(){if(confirm(t.resetConfirm)){setState(initialTown());setPanel('town');setReading(null);setHomeFocus('room');}}

@@ -34,7 +34,7 @@ export const placeNames:Record<Place,Record<Lang,string>>={
 export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop','train','hospital','school'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square'],pool:['street','park'],resort:['street','mountains'],bank:['street','square'],theatre:['street','square'],petshop:['street','square'],train:['street','square'],hospital:['street','square'],school:['street','square']};
 export type TownState={
  v083?:import('./living083').V083;
- version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
+ version:number;playerName?:string;playerGender?:'female'|'male'|'other';place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
  playerAge:number;ageConfirmed:boolean;stress:number;vacationDays:number;onHoliday:boolean;travelCity:'home'|'lake'|'historic'|'alps';workShifts:number;careerRank:number;monthlyBilling:number;utilitiesDue:number;housingStatus:'rented'|'warning'|'temporary'|'owned';family:{relationship:'single'|'dating'|'partner'|'married';partnerId?:string;children:number};pet:Pet|null;
@@ -42,7 +42,7 @@ export type TownState={
 };
 const fresh=():Conversation=>({open:false,topic:null,asked:[],turns:[],repeat:0,visits:0,lastSeen:-1});
 export function initialTown():TownState{return {
- version:8,place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,playerAge:25,ageConfirmed:false,stress:15,vacationDays:24,onHoliday:false,travelCity:'home',workShifts:0,careerRank:0,monthlyBilling:-1,utilitiesDue:0,housingStatus:'rented',family:{relationship:'single',children:0},pet:null,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
+ version:8,playerName:'',playerGender:'other',place:'home',day:0,minute:10*60+30,wallet:85,mindset:12,playerAge:25,ageConfirmed:false,stress:15,vacationDays:24,onHoliday:false,travelCity:'home',workShifts:0,careerRank:0,monthlyBilling:-1,utilitiesDue:0,housingStatus:'rented',family:{relationship:'single',children:0},pet:null,employment:'employed',absences:0,lastShift:-1,life:initialLife(),social:defaultSocial(),
  discovered:['home','street','bakery','work','market','restaurant'],recommended:[],known:[],selectedNpc:null,conversations:{},
  completed:[],journal:{cs:['Přistěhoval ses do městečka.'],de:['Du bist in die Stadt gezogen.']},
  completedQuiz:[],lastRead:-1,lastResearch:-1,walletHistory:[85],restaurantStory:initialRestaurantStory(),factsSeen:[],lastFactDay:-1,marketVisits:0,marketEncounterResolved:-1,storySeen:[],storyPending:[],socialTickDay:-1,crushId:null,railTalkDay:-1
@@ -104,7 +104,12 @@ export function travelMinutes(from:Place,to:Place,day:number):number{
 function moveTo(s:TownState,to:Place):TownState{
  if(to===s.place)return s;
  const n=addTime(s,travelMinutes(s.place,to,s.day));
- return arrival083({...n,place:to,selectedNpc:null,marketVisits:to==='market'?s.marketVisits+1:s.marketVisits,marketLastResponse:undefined});
+ const abandoned=s.place==='work'&&to!=='work'&&s.day%7>=2&&s.lastShift!==s.day&&s.minute>=8*60&&s.minute<16*60;
+ const absences=abandoned?s.absences+1:s.absences;
+ const employment=abandoned?(absences>=2?'fired':'warned'):s.employment;
+ const next={...n,place:to,selectedNpc:null,absences,employment,marketVisits:to==='market'?s.marketVisits+1:s.marketVisits,marketLastResponse:undefined};
+ const moved=arrival083(next);
+ return abandoned?note(moved,absences>=2?'Znovu jsi opustil pracoviště bez svolení. Zaměstnavatel tě propustil.':'Odešel jsi z pracoviště bez upozornění. Šéf si toho všiml a při dalším přestupku budou následovat důsledky.',absences>=2?'Du hast den Arbeitsplatz erneut unangemeldet verlassen. Der Arbeitgeber hat dich entlassen.':'Du hast den Arbeitsplatz ohne Meldung verlassen. Dein Chef hat es bemerkt. Beim nächsten Mal folgen Konsequenzen.'):moved;
 }
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;

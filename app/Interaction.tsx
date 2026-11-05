@@ -2,6 +2,7 @@
 import {useState} from 'react';
 import {byId,choices,quizzes,solve,revealNewFact,residents,type TownState,type Lang,type Answer} from '../lib/world';
 import {EventCalendar} from './DailyLife';
+import {DeepDialogue083} from './DeepDialogue083';
 import {SocialPhone} from './SocialUI';
 import {forecast,weatherLabel} from '../lib/weather';
 import {dailyFacts,nextUnusedFact} from '../lib/facts';
@@ -18,7 +19,7 @@ export function Interaction({state,lang,onApproach,onExit,onSend,busy}:Omit<Prop
  const send=async(text:string,choice?:Answer)=>{if(!text.trim()||busy)return;setDraft('');await onSend(text,choice);};
  return <div className="interaction-content">{current&&m?<><div className="character-head"><div className="character-portrait">{current.portrait}</div><div><strong>{state.known.includes(current.id)?current.name:t.undiscovered}</strong><small>{t.resume}</small></div></div>
  <div className="message-history">{m.turns.slice(-12).map((turn,i)=><div className={turn.role==='player'?'user-message':'character-message'} key={i}>{turn.role==='player'?(turn.raw||turn[lang]):turn[lang]}</div>)}</div>
- {m.open?<><div className="answer-list">{choices(state,lang).map(opt=><button key={opt.id} disabled={busy} className={opt.topic==='bye'?'exit-option':''} onClick={()=>opt.topic==='bye'?onExit():send(opt[lang],opt)}>{opt.topic==='bye'?'↩ ':''}{opt[lang]}</button>)}</div><label className="input-label" htmlFor="custom-reply">{t.your}</label><textarea id="custom-reply" value={draft} onChange={e=>setDraft(e.target.value)} rows={3} placeholder={t.placeholder} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')send(draft)}}/><div className="text-actions"><button disabled={!draft.trim()||busy} onClick={()=>send(draft)}>{busy?t.waiting:t.send}</button><button onClick={onExit}>{t.goodbye}</button></div></>:<button className="action-link" onClick={()=>onApproach(current.id)}>{t.again} →</button>}</>:<p className="muted-panel">{t.noNpc}</p>}</div>;
+ {m.open?<><div className="answer-list">{choices(state,lang).map(opt=><button key={opt.id} disabled={busy} className={opt.topic==='bye'?'exit-option':''} onClick={()=>opt.topic==='bye'?onExit():send(opt[lang],opt)}>{opt.topic==='bye'?'↩ ':''}{opt[lang]}</button>)}</div><DeepDialogue083 state={state} lang={lang} onSend={text=>send(text)} busy={busy}/><label className="input-label" htmlFor="custom-reply">{t.your}</label><textarea id="custom-reply" value={draft} onChange={e=>setDraft(e.target.value)} rows={3} placeholder={t.placeholder} onKeyDown={e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter')send(draft)}}/><div className="text-actions"><button disabled={!draft.trim()||busy} onClick={()=>send(draft)}>{busy?t.waiting:t.send}</button><button onClick={onExit}>{t.goodbye}</button></div></>:<button className="action-link" onClick={()=>onApproach(current.id)}>{t.again} →</button>}</>:<p className="muted-panel">{t.noNpc}</p>}</div>;
 }
 export function Quizzes({state,lang,onState}:{state:TownState;lang:Lang;onState:(s:TownState)=>void}){
  const [selected,setSelected]=useState<string|null>(null);
@@ -58,9 +59,10 @@ export function Missions({state,lang}:{state:TownState;lang:Lang}){
  const tasks=[['meet','Poznej prvního obyvatele','Lerne die erste Person kennen'],['discover','Objev doporučené místo','Entdecke einen empfohlenen Ort'],['work','Odpracuj směnu','Arbeite eine Schicht'],['buy','Nakup v pekárně','Kaufe eine Brezel'],['read','Přečti knihu','Lies ein Buch'],['research','Prostuduj webový článek','Lies einen Online-Artikel']] as const;
  return <div className="panel-scroll"><h3>🎯 {lang==='cs'?'Mise a cíle':'Missionen und Ziele'}</h3>{tasks.filter(x=>x[0]==='meet'||x[0]==='work'||x[0]==='buy'||state.discovered.includes('library')).map(([id,cs,de])=><div key={id} className={'mission-line '+(state.completed.includes(id)?'done':'')}><span>{state.completed.includes(id)?'✓':'○'}</span><span>{lang==='cs'?cs:de}</span></div>)}{state.employment==='warned'&&<div className="feedback">{lang==='cs'?'Pozor, v práci evidují absence.':'Achtung, Fehlzeiten wurden registriert.'}</div>}{state.employment==='fired'&&<div className="feedback">{lang==='cs'?'Zaměstnavatel tě propustil.':'Dein Arbeitgeber hat dich entlassen.'}</div>}</div>;
 }
+let lastPhoneTab:'events'|'contacts'|'messages'|'weather'|'journal'='events';
 export function Phone({state,lang,onState,onAttend}:{state:TownState;lang:Lang;onState:(s:TownState)=>void;onAttend:(s:TownState)=>void}){
- const [tab,setTab]=useState<'events'|'contacts'|'messages'|'weather'|'journal'>('events');
+ const [tab,setTab]=useState<'events'|'contacts'|'messages'|'weather'|'journal'>(lastPhoneTab);
  const labels=lang==='cs'?{events:'Události',contacts:'Kontakty',messages:'Zprávy',weather:'Počasí',journal:'Deník'}:{events:'Ereignisse',contacts:'Kontakte',messages:'Nachrichten',weather:'Wetter',journal:'Tagebuch'};
- return <div className="panel-scroll"><div className="phone-tabs">{(['events','contacts','messages','weather','journal'] as const).map(k=><button className={tab===k?'active':''} key={k} onClick={()=>setTab(k)}>{labels[k]}</button>)}</div>
+ return <div className="panel-scroll"><div className="phone-tabs">{(['events','contacts','messages','weather','journal'] as const).map(k=><button className={tab===k?'active':''} key={k} onClick={()=>{setTab(k);lastPhoneTab=k}}>{labels[k]}</button>)}</div>
  {tab==='events'?<EventCalendar state={state} lang={lang} onState={onState} onAttend={onAttend}/>:tab==='contacts'||tab==='messages'?<SocialPhone state={state} lang={lang} onState={onState}/>:tab==='weather'?<div className="forecast-list">{forecast(state.day).map(x=><div key={x.day} className="phone-line">{lang==='cs'?'Den ':'Tag '}{x.day+1} · {x.symbol} {weatherLabel(x.kind,lang)} · {x.temperature} °C</div>)}</div>:(state.journal[lang]||[]).map((s,i)=><div key={i} className="phone-line">{s}</div>)}</div>;
 }

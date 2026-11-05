@@ -1,0 +1,23 @@
+'use client';
+import type {TownState,Lang} from '../lib/world';
+import {residentsAt} from '../lib/residents';
+import {byId} from '../lib/residents';
+import {v083,level083,levelName083,hint083,workload083,recover083,meeting083,workBlock083,answer083,skipMeeting083,lunch083,finish083,role083,visitor083,beat083,chooseBeat083,BOSS083} from '../lib/living083';
+export function Living083Panel({state,lang,onState}:{state:TownState;lang:Lang;onState:(s:TownState)=>void}){
+ const p=v083(state),lv=level083(state),work=state.place==='work',meeting=meeting083(state);
+ const lunch=work&&state.minute>=720&&state.minute<780&&!p.lunches.includes(state.day);
+ const people=work?[...new Set([...residentsAt('work',state.day,state.minute).map(x=>x.id),...(visitor083(state)?[visitor083(state)!.id]:[])])]:[];
+ const beat=beat083(state);
+ return <div className="living083">
+ <section className="life-object"><h4>🧭 {lang==='cs'?'Životní výzva':'Lebensaufgabe'} · {lv}/20</h4><p><strong>{levelName083(state,lang)}</strong></p><p>💡 {hint083(state,lang)}</p><small>Resilience {p.resilience} · {lang==='cs'?'Empatie':'Empathie'} {p.empathy} · {lang==='cs'?'Organizace':'Organisation'} {p.organization} · {lang==='cs'?'Zátěž':'Belastung'} {workload083(state)}/100</small><div className="story-choice-list">
+ <button onClick={()=>onState(recover083(state,'rest'))}>{lang==='cs'?'15 minut klidu':'15 Minuten Ruhe'}</button><button onClick={()=>onState(recover083(state,'plan'))}>{lang==='cs'?'Naplánovat priority':'Prioritäten planen'}</button><button onClick={()=>onState(recover083(state,'support'))}>{lang==='cs'?'Požádat o pomoc':'Um Hilfe bitten'}</button></div></section>
+ {work&&<section className="life-object office-module"><h4>🏢 {lang==='cs'?'Pracovní den':'Arbeitstag'}</h4><small>{lang==='cs'?'Reputace':'Ruf'} {p.reputation} · {lang==='cs'?'Důvěra šéfa':'Chefvertrauen'} {p.bossTrust}</small>
+ <div className="office-people">{people.map(id=><div className="office-person" key={id}><span>{p.roles.includes(id)?(byId(id)?.name+' · '+(id===BOSS083?(lang==='cs'?'šéf':'Chef'):(lang==='cs'?'kolega / návštěvník':'Kollege / Besucher'))):(lang==='cs'?'Neznámá osoba':'Unbekannte Person')}</span>{!p.roles.includes(id)&&<button onClick={()=>onState(role083(state,id))}>{lang==='cs'?'Představit se':'Vorstellen'}</button>}</div>)}</div>
+ {meeting&&<div><h4>📊 {lang==='cs'?'Porada':'Besprechung'}</h4><p>{meeting[lang]}</p><div className="story-choice-list">{meeting.answers.map((a,i)=><button key={i} onClick={()=>onState(answer083(state,meeting.id,i))}>{a}</button>)}</div><button onClick={()=>onState(skipMeeting083(state))}>{lang==='cs'?'Vynechat poradu':'Besprechung auslassen'}</button></div>}
+ {lunch&&<div><h4>🥗 12:00–13:00 · {lang==='cs'?'Oběd':'Mittagspause'}</h4><div className="story-choice-list">{([['family','Rodina','Familie'],['hobby','Koníčky','Hobbys'],['travel','Cestování','Reisen'],['listen','Naslouchat','Zuhören'],['skip','Vynechat oběd','Auslassen']] as const).map(([k,cs,de])=><button key={k} disabled={k!=='skip'&&state.wallet<6.5} onClick={()=>onState(lunch083(state,k))}>{lang==='cs'?cs:de}</button>)}</div></div>}
+ {!meeting&&!lunch&&state.minute<990&&state.lastShift!==state.day&&<button onClick={()=>onState(workBlock083(state))}>{lang==='cs'?'Pracovat 30 minut':'30 Minuten arbeiten'}</button>}
+ {state.minute>=990&&state.lastShift!==state.day&&p.officeStarted===state.day&&<button onClick={()=>onState(finish083(state))}>{lang==='cs'?'Ukončit směnu a převzít mzdu':'Schicht abschließen und Lohn erhalten'}</button>}</section>}
+ {beat&&<section className="life-object"><h4>🎭 {lang==='cs'?'Nečekaná situace':'Unerwartete Situation'}</h4><p>{beat[lang]}</p><div className="story-choice-list">{beat.options.map((o,i)=><button key={i} onClick={()=>onState(chooseBeat083(state,beat.id,i))}>{o[lang==='cs'?0:1]}</button>)}</div></section>}
+ {p.last&&<section className="life-object"><p>{p.last[lang]}</p></section>}
+ </div>;
+}

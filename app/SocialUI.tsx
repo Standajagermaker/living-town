@@ -3,6 +3,7 @@ import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
 import {byId,callRestaurantStaff,fastTravel} from '../lib/world';
 import {StoryExpansionPanel} from './StoryExpansionUI';
+import {Living083Panel} from './Living083Panel';
 import {destinations,travelToCity,returnFromHoliday,railConversationAvailable,railDelayMinutes,railwayConversation,railwayIncidentTitle,railwayIncidentText,resolveRailIncident} from '../lib/trainTravel';
 import {sendText,payRent,payUtilities,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
@@ -21,7 +22,7 @@ export function SocialActivities({state,lang,onState}:Props){
  const t=dict[lang],social=state.social;
  const [guest,setGuest]=useState<string>('');
  const friends=social.contacts.filter(id=>state.social.bonds[id]?.warmth>=18);
- return <div className="social-activities">
+ return <div className="social-activities"><Living083Panel state={state} lang={lang} onState={onState}/>
  {state.place==='home'&&<div className="life-object"><h4>🏠 {t.rent}</h4>
  <p>{lang==='cs'?'Další první den měsíce':'Nächster Monatserster'}: {Math.floor(state.day/30)*30+31} · 210 €</p>
  {social.rentArrears>0&&<p>{t.unpaid} ({social.rentArrears})</p>}

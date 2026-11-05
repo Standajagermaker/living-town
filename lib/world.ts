@@ -10,6 +10,7 @@ import {weatherAt} from './weather';
 import {seasonFor,missingOutfit} from './social';
 import {type Pet} from './pets';
 import {supermarketEncounter} from './marketEncounter';
+import {arrival083,greeting083,v083} from './living083';
 export type {Place,Lang};
 export type Topic='hello'|'name'|'about'|'advice'|'job'|'event'|'hobby'|'followup'|'thanks'|'bye'|'custom'|'contact'|'flirt'|'invite';
 export type Turn={role:'player'|'npc';cs:string;de:string;raw?:string};
@@ -32,6 +33,7 @@ export const placeNames:Record<Place,Record<Lang,string>>={
 };
 export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop','train','hospital','school'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square'],pool:['street','park'],resort:['street','mountains'],bank:['street','square'],theatre:['street','square'],petshop:['street','square'],train:['street','square'],hospital:['street','square'],school:['street','square']};
 export type TownState={
+ v083?:import('./living083').V083;
  version:number;place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
  conversations:Record<string,Conversation>;completed:string[];journal:{cs:string[];de:string[]};
@@ -102,7 +104,7 @@ export function travelMinutes(from:Place,to:Place,day:number):number{
 function moveTo(s:TownState,to:Place):TownState{
  if(to===s.place)return s;
  const n=addTime(s,travelMinutes(s.place,to,s.day));
- return {...n,place:to,selectedNpc:null,marketVisits:to==='market'?s.marketVisits+1:s.marketVisits,marketLastResponse:undefined};
+ return arrival083({...n,place:to,selectedNpc:null,marketVisits:to==='market'?s.marketVisits+1:s.marketVisits,marketLastResponse:undefined});
 }
 export function go(s:TownState,to:Place):TownState{
  if(!canGo(s,to))return s;
@@ -153,7 +155,8 @@ export function startConversation(s:TownState,id:string):TownState{
    venue==='cafe'?pair('Co si dáte? Kávu, nebo čaj?','Was darf es sein? Kaffee oder Tee?'):
    venue==='bank'?pair('Přejete si poradit s účtem, nebo úvěrem?','Geht es um Ihr Konto oder einen Kredit?'):
    venue==='gym'?pair('Jdete dnes cvičit?','Trainierst du heute?'):null;
- const prompt=placePrompt??(mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings);
+ const contextual=prior.visits>0&&venue!=='restaurant'?greeting083(s,id):null;
+ const prompt=(contextual??placePrompt)??(mood==='tired'?pair('Dnes už jsem trochu unavená, ale chvíli mám.','Ich bin heute etwas müde, aber kurz habe ich Zeit.'):greetings);
  const bond=s.social?.bonds[id];
  const away=!!currentAppointment(r,s.day,s.minute);
  const reluctant=(mood==='irritable'||mood==='stressed'||mood==='tired')&&(r.trait+s.day*7)%5<=2;
@@ -163,7 +166,7 @@ export function startConversation(s:TownState,id:string):TownState{
   :prompt;
  const forget=prior.lastSeen>=0&&s.day-prior.lastSeen>=10;
  const remembered=forget?{...prior,asked:prior.asked.slice(-3),topic:null,repeat:0}:prior;
- const n={...s,selectedNpc:id,conversations:{...s.conversations,[id]:{...remembered,open:!refuses,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...line}]}}};
+ const n={...s,v083:{...v083(s),greeting:null},selectedNpc:id,conversations:{...s.conversations,[id]:{...remembered,open:!refuses,visits:prior.visits+1,lastSeen:s.day,turns:[...prior.turns,{role:'npc' as const,...line}]}}};
  return refuses?n:developBond(n,id,'time');
 }
 export function exitConversation(s:TownState):TownState{
@@ -364,7 +367,7 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  pair('Možná ano, ale pracovní vztahy bývají složité. Můžeme se nejdřív lépe poznat.','Vielleicht. Beziehungen bei der Arbeit können kompliziert sein. Lernen wir uns erst besser kennen.')):null;
  const contextualChoice=workRomance??((choice&&(venueReaction[choicePrefix]??livedReplies[choice.id]))||(choice?contextualResponse(choice.id):null));
  const key=contextualChoice??(topic==='custom'?variants[stableHash(input+r.id+m.turns.length)%variants.length]:responses[topic]);
- const boss=id==='npc-02'&&s.place==='work'&&topic==='advice';
+ const boss=id==='npc-05'&&s.place==='work'&&v083(s).roles.includes(id)&&topic==='advice';
  const bossIrritable=(s.day*11+s.minute*3)%5<3;
  const bossText=pair(bossIrritable?'Šéf: „Doporučil bych ti hlavně tvoje pracovní místo. Teď do práce.“':'Šéf: „Kavárna na náměstí je dobrá. Ale až po práci. A mimochodem, dnes odvádíš dobrou práci.“',bossIrritable?'Chef: „Ich empfehle dir vor allem deinen Arbeitsplatz. An die Arbeit!“':'Chef: „Das Café am Marktplatz ist gut. Aber erst nach Feierabend. Übrigens, gute Arbeit heute.“');
  const bond=s.social?.bonds[id]??{warmth:0,trust:0,lastContact:-1,invited:false,requested:false,cooldownUntil:-1};
@@ -383,7 +386,8 @@ export function reply(s:TownState,input:string,lang:Lang,choice?:Answer,generate
  const friction=humourGap?pair('Počkej, to měl být vtip? Já jsem to pochopil úplně vážně. Jak jsi to myslel?','Moment, das war ein Witz? Ich habe das ganz ernst verstanden. Wie meinst du das?'):
  comprehensionGap?pair('Promiň, ztrácím se v tom. Co tím přesně myslíš?','Entschuldige, ich komme nicht ganz mit. Was meinst du damit?'):
  pair('Asi si teď úplně nerozumíme. Jak jsi to myslel?','Ich glaube, wir reden gerade aneinander vorbei. Wie meinst du das?');
- const contextual=misunderstood?friction:interpersonal??(boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??(generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim(),generated.de.trim()):key));
+ const live=!choice&&generated?.cs?.trim()&&generated?.de?.trim()?pair(generated.cs.trim().slice(0,250),generated.de.trim().slice(0,250)):null;
+ const contextual=interpersonal??live??(misunderstood?friction:boss?bossText:privacyDecline&&['hobby','about','job'].includes(topic)?responses[topic]:contextualChoice??key);
  const newText=repeated?contextual:mood==='tired'&&!misunderstood?pair(contextual.cs+' Dnes už jsem trochu unavený.',contextual.de+' Ich bin heute etwas müde.'):mood==='stressed'&&!misunderstood?pair(contextual.cs+' Dnes toho mám hodně.',contextual.de+' Heute habe ich viel zu tun.'):contextual;
  const npcTurn:Turn={role:'npc',cs:newText.cs,de:newText.de};
  const seen=new Set(m.asked);if(!repeat)seen.add(askedId);

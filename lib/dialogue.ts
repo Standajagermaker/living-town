@@ -82,6 +82,7 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  ['reason-important','Protože mi na tom záleží.','Weil mir das wichtig ist.'],
  ['reason-experience','Mám s tím nějakou zkušenost.','Ich habe damit eigene Erfahrungen gemacht.'],
  ['reason-unsure','Nejsem si úplně jistý.','Ich bin mir nicht ganz sicher.']]);
+ if(/(?:jmenuji se|jmenuju se|ich heiße|ich heisse|mein name ist|ich bin).{0,80}(?:a ty|und (?:du|sie))\??$/.test(line))return options([['intro-hello','Těší mě! Jsem tu nový.','Freut mich, ich bin neu hier.'],['intro-name','Jmenuji se [tvoje jméno].','Ich heiße [dein Name].'],['intro-question','Rád tě poznávám. Co tě sem přivedlo?','Freut mich. Was führt dich hierher?']]);
  if(/a ty|und sie|und du/.test(line))return options([
  ['self-explore','Já teď hlavně poznávám nové prostředí.','Ich lerne gerade meine neue Umgebung kennen.'],
  ['self-relax','Dnes bych rád trochu odpočíval.','Heute möchte ich mich etwas entspannen.'],

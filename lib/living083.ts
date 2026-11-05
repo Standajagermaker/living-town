@@ -1,7 +1,7 @@
 import type {TownState,Lang} from './world';
 import {addTime} from './life';
 import {byId,residents,residentsAt,moodOf} from './residents';
-export type V083={empathy:number;resilience:number;organization:number;reputation:number;bossTrust:number;officeStarted:number;meetings:number[];lunches:number[];roles:string[];seen:string[];greeted:Record<string,number>;greeting:{id:string;cs:string;de:string}|null;last:{cs:string;de:string}|null;playerName:string};
+export type V083={empathy:number;resilience:number;organization:number;reputation:number;bossTrust:number;officeStarted:number;meetings:number[];lunches:number[];roles:string[];seen:string[];greeted:Record<string,number>;greeting:{id:string;cs:string;de:string}|null;last:{cs:string;de:string}|null;priority?:'work'|'health'|'relationships';supportDay?:number;playerName:string};
 export const initial083=():V083=>({empathy:10,resilience:10,organization:10,reputation:10,bossTrust:10,officeStarted:-1,meetings:[],lunches:[],roles:[],seen:[],greeted:{},greeting:null,last:null,playerName:''});
 export const v083=(s:TownState):V083=>({...initial083(),...s.v083});
 const clamp=(v:number)=>Math.min(100,Math.max(0,Math.round(v)));
@@ -13,7 +13,14 @@ export function level083(s:TownState){return Math.min(20,1+Math.floor(s.workShif
 export function levelName083(s:TownState,lang:Lang){const i=level083(s)-1;return lang==='cs'?levels[i]:'Lebensphase '+(i+1);}
 export function hint083(s:TownState,lang:Lang){return lang==='cs'?hints[level083(s)-1]:('Denk daran: '+['Zeit','Beziehungen','Prioritäten','Erholung'][Math.floor((level083(s)-1)/5)]+'.');}
 export function workload083(s:TownState){return clamp(12+level083(s)*3+Object.values(s.social.bonds??{}).filter(b=>b.warmth>12).length*2+(s.family.children||0)*9+(s.pet?7:0)+(s.utilitiesDue>0?9:0)+(s.employment==='warned'?10:0));}
-export function recover083(s:TownState,kind:'rest'|'plan'|'support'){const n=addTime(s,kind==='rest'?15:20),p=v083(n);return {...n,stress:clamp(n.stress-(kind==='rest'?5:7)),v083:{...p,resilience:clamp(p.resilience+1),organization:clamp(p.organization+(kind==='plan'?3:0)),empathy:clamp(p.empathy+(kind==='support'?2:0)),last:kind==='plan'?pair('Stanovil jsi priority. Všechno dnes nemusí být hotové.','Du hast Prioritäten gesetzt.'):kind==='support'?pair('Požádat o pomoc může být rozumné.','Hilfe zu suchen kann klug sein.'):pair('Krátký odpočinek ti pomohl.','Die kurze Pause hat geholfen.')}};}
+export function recover083(s:TownState,kind:'rest'|'plan'|'support',priority:'work'|'health'|'relationships'='work'){
+ const n=addTime(s,30),p=v083(n);
+ const colleagueAvailable=s.place==='work'||s.social.contacts.length>0;
+ const success=kind==='support'&&colleagueAvailable;
+ const cs=kind==='plan'?({work:'Dnes dáš přednost práci. Pracovní úkoly mají prioritu.',health:'Dnes dáš přednost odpočinku a péči o sebe.',relationships:'Dnes dáš přednost přátelům a vztahům.'}[priority]):kind==='support'?(success?'Požádal jsi kolegu nebo kontakt o pomoc. Zátěž se trochu snížila.':'Tady teď nemáš koho požádat. Zkus pracovní kolegy nebo uložené kontakty.'):'Půlhodina klidu obnovila část energie.';
+ const de=kind==='plan'?'Du hast deine Tagespriorität festgelegt.':kind==='support'?(success?'Du hast um Unterstützung gebeten.':'Hier ist derzeit niemand erreichbar.'):'Eine halbe Stunde Ruhe hat dir Energie gegeben.';
+ return {...n,stress:clamp(n.stress-(kind==='rest'?7:kind==='plan'?4:success?9:0)),life:kind==='rest'?{...n.life,energy:Math.min(100,n.life.energy+12)}:n.life,v083:{...p,priority:kind==='plan'?priority:p.priority,supportDay:success?n.day:p.supportDay,resilience:clamp(p.resilience+(kind==='rest'?1:0)),organization:clamp(p.organization+(kind==='plan'?3:0)),empathy:clamp(p.empathy+(success?2:0)),last:pair(cs,de)}};
+}
 export const officeQuizzes=[
  {id:'percent',cs:'Zakázka stojí 240 €. Sleva je 15 %. Kolik zaplatí zákazník?',de:'Auftrag: 240 €, Rabatt 15 %. Was zahlt der Kunde?',answers:['204 €','216 €','225 €'],correct:0,explanation:'15 % z 240 je 36, takže 204 €.'},
  {id:'workers',cs:'Tři pracovníci dokončí práci za šest dní. Kolik dní potřebuje šest stejně rychlých pracovníků?',de:'Drei Mitarbeiter brauchen sechs Tage. Wie lange brauchen sechs?',answers:['6 dní / Tage','3 dny / Tage','2 dny / Tage'],correct:1,explanation:'18 člověkodnů děleno šesti = 3.'},

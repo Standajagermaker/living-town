@@ -4,6 +4,7 @@ import {byId,moodOf} from './residents';
 import type {Place} from './game';
 import {foodTrouble} from './restaurantStory';
 import {petAtNewDay} from './pets';
+import {relationshipAging} from './storyExpansion';
 export type Bond={warmth:number;trust:number;lastContact:number;invited:boolean;requested:boolean;cooldownUntil:number};
 export type PhoneMessage={id:string;residentId:string;sentDay:number;sentMinute:number;dueDay:number;dueMinute:number;body:string;replyCs:string;replyDe:string;delivered:boolean};
 export type SocialState={bonds:Record<string,Bond>;contacts:string[];messages:PhoneMessage[];housingPaidThrough:number;rentArrears:number;wardrobe:string[];seasonAnnounced:number;lastHoliday:number;tripCount:number};
@@ -92,7 +93,7 @@ export function applyNewDay(s:TownState):TownState{
  const rentDue=newBilling&&s.housingStatus!=='owned'&&s.day>=social.housingPaidThrough;
  const arrears=rentDue?social.rentArrears+1:social.rentArrears;
  const utilitiesDue=s.utilitiesDue+(newBilling?65:0);
- let n:TownState={...s,stress:Math.min(100,Math.max(0,s.stress-3+(arrears?5:0)+(s.employment==='fired'?3:0))),
+ let n:TownState={...relationshipAging(s),stress:Math.min(100,Math.max(0,s.stress-3+(arrears?5:0)+(s.employment==='fired'?3:0))),
  monthlyBilling:newBilling?month:s.monthlyBilling,utilitiesDue,
  housingStatus:arrears>=2?'warning':s.housingStatus,
  pet:s.pet?petAtNewDay(s.pet,s.day):null,social:{...social,rentArrears:arrears}};

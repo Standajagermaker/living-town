@@ -2,7 +2,7 @@
 import {useState,useEffect} from 'react';
 import type {Place,Lang} from '../lib/world';
 import {placeNames} from '../lib/world';
-export const glyph:Record<Place,string>={bank:'🏦',theatre:'🎭',petshop:'🐾',train:'🚉',home:'⌂',street:'🚶',bakery:'☕',square:'♜',work:'▣',library:'▤',market:'🛒',cafe:'☕',park:'🌳',church:'⛪',hotel:'🛏',gym:'🏋',mountains:'⛰',restaurant:'🍽',outfitter:'🧥',pool:'🏊',resort:'🎿'};
+export const glyph:Record<Place,string>={bank:'🏦',theatre:'🎭',petshop:'🐾',train:'🚉',hospital:'🏥',school:'🏫',home:'⌂',street:'🚶',bakery:'☕',square:'♜',work:'▣',library:'▤',market:'🛒',cafe:'☕',park:'🌳',church:'⛪',hotel:'🛏',gym:'🏋',mountains:'⛰',restaurant:'🍽',outfitter:'🧥',pool:'🏊',resort:'🎿'};
 export function ArtTown({season}:{season:number}){
  return <svg className={'town-art season-'+season} viewBox="0 0 1000 680" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
  <defs><linearGradient id="sky-art" x2="0" y2="1"><stop stopColor="#e2cba9"/><stop offset=".72" stopColor="#b5d1c8"/><stop offset="1" stopColor="#839c88"/></linearGradient><linearGradient id="river-art" x2="0" y2="1"><stop stopColor="#b4ddcb"/><stop offset="1" stopColor="#3b7c91"/></linearGradient></defs>
@@ -21,7 +21,7 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
  {place:'market',x:71,y:58},{place:'cafe',x:60,y:52},{place:'park',x:81,y:66},
  {place:'church',x:59,y:30},{place:'hotel',x:17,y:54},{place:'gym',x:86,y:24},
  {place:'mountains',x:72,y:18},{place:'restaurant',x:43,y:49},{place:'outfitter',x:24,y:59},
- {place:'pool',x:19,y:33},{place:'resort',x:86,y:13},{place:'bank',x:69,y:72},{place:'theatre',x:37,y:28},{place:'petshop',x:79,y:77},{place:'train',x:11,y:19}
+ {place:'pool',x:19,y:33},{place:'resort',x:86,y:13},{place:'bank',x:69,y:72},{place:'theatre',x:37,y:28},{place:'petshop',x:79,y:77},{place:'train',x:11,y:19},{place:'hospital',x:94,y:43},{place:'school',x:91,y:53}
 ];
 export function StreetView({place,lang,season,hour=12,homeFocus='room'}:{place:Place;lang:Lang;season:number;hour?:number;homeFocus?:'room'|'tv'|'phone'}){
  const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work',theatre:'theatre'};

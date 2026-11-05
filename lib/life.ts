@@ -47,7 +47,7 @@ export function addTime(s:TownState,mins:number):TownState{
  let minute=s.minute+mins, day=s.day;
  if(minute>=1440){day+=Math.floor(minute/1440);minute%=1440}
  const life=s.life??initialLife();
- const next={...s,day,minute,life:{...life,energy:Math.max(0,life.energy-Math.max(0,mins)*.035),hunger:Math.min(100,life.hunger+Math.max(0,mins)*.045)}};
+ const next={...s,day,minute,life:{...life,energy:Math.max(0,life.energy-Math.max(0,mins)*.035*(1+Math.max(0,s.playerAge+Math.floor(s.day/365)-50)/125)),hunger:Math.min(100,life.hunger+Math.max(0,mins)*.045)}};
  return day!==s.day?applyNewDay(next):collectReplies(next);
 }
 export function eat(s:TownState):TownState{

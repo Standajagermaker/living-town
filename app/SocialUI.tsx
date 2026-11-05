@@ -2,6 +2,7 @@
 import {useState} from 'react';
 import type {TownState,Lang} from '../lib/world';
 import {byId,callRestaurantStaff,fastTravel} from '../lib/world';
+import {StoryExpansionPanel} from './StoryExpansionUI';
 import {destinations,travelToCity,returnFromHoliday,railConversationAvailable,railDelayMinutes,railwayConversation,railwayIncidentTitle,railwayIncidentText,resolveRailIncident} from '../lib/trainTravel';
 import {sendText,payRent,payUtilities,gearItems,gearFor,buyGear,dayTrip,holiday,restaurantMeal,restaurantQuote,theatreTicket,sport,seasonFor} from '../lib/social';
 type Props={state:TownState;lang:Lang;onState:(s:TownState)=>void};
@@ -70,5 +71,6 @@ export function SocialActivities({state,lang,onState}:Props){
  {friends.length>0&&<div className="restaurant-invite"><label>{t.inviteMeal}</label><select value={guest} onChange={e=>setGuest(e.target.value)}><option value="">—</option>{friends.map(id=><option key={id} value={id}>{byId(id)?.name}</option>)}</select>
  {guest&&<button disabled={state.wallet<restaurantQuote(state,guest)} onClick={()=>onState(restaurantMeal(state,guest))}>{t.inviteMeal} · {restaurantQuote(state,guest).toFixed(2)} €</button>}</div>}</div>}
  {state.place==='street'&&<div className="life-object"><h4>🎭 {lang==='cs'?'Divadlo':'Theater'}</h4><button onClick={()=>onState(theatreTicket(state))}>{t.theatre}</button></div>}
+ <StoryExpansionPanel state={state} lang={lang} onState={onState}/>
  </div>;
 }

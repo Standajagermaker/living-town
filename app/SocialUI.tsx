@@ -21,6 +21,7 @@ export function SocialPhone({state,lang,onState}:Props){
 export function SocialActivities({state,lang,onState}:Props){
  const t=dict[lang],social=state.social;
  const [guest,setGuest]=useState<string>('');
+ const [tipPercent,setTipPercent]=useState(0);
  const friends=social.contacts.filter(id=>state.social.bonds[id]?.warmth>=18);
  return <div className="social-activities"><Living083Panel state={state} lang={lang} onState={onState}/>
  {state.place==='home'&&<div className="life-object"><h4>🏠 {t.rent}</h4>
@@ -68,9 +69,9 @@ export function SocialActivities({state,lang,onState}:Props){
  <div className="restaurant-staff-actions">
  <button onClick={()=>onState(callRestaurantStaff(state,'chef'))} disabled={state.restaurantStory.chefCalled}>{lang==='cs'?'👨‍🍳 Požádat o kuchaře':'👨‍🍳 Koch rufen'}</button>
  <button onClick={()=>onState(callRestaurantStaff(state,'owner'))} disabled={state.restaurantStory.ownerCalled}>{lang==='cs'?'👔 Požádat o majitele':'👔 Inhaber rufen'}</button>
- </div><button disabled={state.wallet<restaurantQuote(state)} onClick={()=>onState(restaurantMeal(state))}>{t.restaurant} · {restaurantQuote(state).toFixed(2)} €</button>
+ </div><div className="tip-picker" aria-label={lang==='cs'?'Dobrovolné spropitné':'Freiwilliges Trinkgeld'}>{[0,5,10,15].map(p=><button key={p} className={tipPercent===p?'active':''} onClick={()=>setTipPercent(p)}>{p===0?(lang==='cs'?'Bez dýška':'Ohne Trinkgeld'):p+' %'}</button>)}</div><p className="tip-info">{lang==='cs'?'Spropitné je dobrovolné. Obsluha si tvé gesto zapamatuje.':'Trinkgeld ist freiwillig. Die Bedienung merkt sich deine Geste.'} {state.restaurantStory.waiterSatisfaction!==undefined?'🙂 '+state.restaurantStory.waiterSatisfaction:''}</p><button disabled={state.wallet<Math.round(restaurantQuote(state)*(1+tipPercent/100)*100)/100} onClick={()=>onState(restaurantMeal(state,undefined,tipPercent))}>{t.restaurant} · {(Math.round(restaurantQuote(state)*(1+tipPercent/100)*100)/100).toFixed(2)} €</button>
  {friends.length>0&&<div className="restaurant-invite"><label>{t.inviteMeal}</label><select value={guest} onChange={e=>setGuest(e.target.value)}><option value="">—</option>{friends.map(id=><option key={id} value={id}>{byId(id)?.name}</option>)}</select>
- {guest&&<button disabled={state.wallet<restaurantQuote(state,guest)} onClick={()=>onState(restaurantMeal(state,guest))}>{t.inviteMeal} · {restaurantQuote(state,guest).toFixed(2)} €</button>}</div>}</div>}
+ {guest&&<button disabled={state.wallet<Math.round(restaurantQuote(state,guest)*(1+tipPercent/100)*100)/100} onClick={()=>onState(restaurantMeal(state,guest,tipPercent))}>{t.inviteMeal} · {(Math.round(restaurantQuote(state,guest)*(1+tipPercent/100)*100)/100).toFixed(2)} €</button>}</div>}</div>}
  {state.place==='street'&&<div className="life-object"><h4>🎭 {lang==='cs'?'Divadlo':'Theater'}</h4><button onClick={()=>onState(theatreTicket(state))}>{t.theatre}</button></div>}
  <StoryExpansionPanel state={state} lang={lang} onState={onState}/>
  </div>;

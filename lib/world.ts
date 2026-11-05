@@ -258,7 +258,8 @@ export function choices(s:TownState,lang:Lang):Answer[]{
  {id:'question-no-'+m.turns.length,topic:'followup',cs:'Ne, tentokrát ne.',de:'Nein, dieses Mal nicht.'},
  {id:'question-detail-'+m.turns.length,topic:'followup',cs:'Můžeš mi k tomu říct víc?',de:'Kannst du mir mehr dazu sagen?'}
  ]):venueTopics.length?[...venueTopics,...unused]:[...hello,...context,...unused];
- const current=candidates.filter(c=>!m.asked.includes(c.id)).slice(0,npcQuestion?3:4);
+ const said=new Set(m.turns.filter(x=>x.role==='player').map(x=>(x.raw||x[lang]||'').trim().toLocaleLowerCase()));
+ const current=candidates.filter(c=>!m.asked.includes(c.id)&&!said.has(c[lang].trim().toLocaleLowerCase())).slice(0,npcQuestion?3:4);
  if(!current.length)current.push({id:'more-'+m.turns,topic:'followup',cs:'Co je u tebe nového?',de:'Was gibt es Neues bei Ihnen?'});
  current.push({id:'bye',topic:'bye',cs:'Děkuji za rozhovor, měj se hezky.',de:'Danke für das Gespräch, bis bald.'});
  return current;

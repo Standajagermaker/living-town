@@ -132,18 +132,20 @@ export function restaurantQuote(s:TownState,guestId?:string):number{
  const baseCents=2000+((s.day*137+s.minute*7+s.social.tripCount*59+173)%1947);
  return Math.round(baseCents*(guestId?2:1))/100;
 }
-export function restaurantMeal(s:TownState,guestId?:string):TownState{
+export function restaurantMeal(s:TownState,guestId?:string,tipPercent:number=0):TownState{
  if(s.place!=='restaurant')return s;
  const guest=guestId&&s.social.contacts.includes(guestId)&&getBond(s,guestId).warmth>=18?guestId:undefined;
  if(guestId&&!guest)return s;
- const price=restaurantQuote(s,guest);
+ const basePrice=restaurantQuote(s,guest);
+ const tip=Math.round(basePrice*Math.max(0,Math.min(20,tipPercent))/100*100)/100;
+ const price=Math.round((basePrice+tip)*100)/100;
  if(s.wallet<price)return s;
  const n=addTime(s,45);
  const social=guest?{...n.social,bonds:{...n.social.bonds,[guest]:{...getBond(n,guest),warmth:Math.min(100,getBond(n,guest).warmth+4),trust:Math.min(100,getBond(n,guest).trust+2)}}}:n.social;
  return {...n,wallet:Math.round((s.wallet-price)*100)/100,walletHistory:[...s.walletHistory,Math.round((s.wallet-price)*100)/100],
  life:{...n.life,lastMeal:n.day*1440+n.minute,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)},social,
- restaurantStory:{...s.restaurantStory,mealComplaint:foodTrouble(s.day,s.minute),mealDay:s.day,chefCalled:false,ownerCalled:false},
- journal:foodTrouble(s.day,s.minute)?{
+ restaurantStory:{...s.restaurantStory,mealComplaint:foodTrouble(s.day,s.minute),mealDay:s.day,chefCalled:false,ownerCalled:false,waiterSatisfaction:Math.max(-10,Math.min(10,(s.restaurantStory.waiterSatisfaction??0)+(tipPercent>=10?2:tipPercent>=5?1:-1)))},
+ journal:tipPercent>0?{cs:[...s.journal.cs,`Nechal jsi spropitné ${tip.toFixed(2)} €. Obsluha se usmála.`],de:[...s.journal.de,`Du hast ${tip.toFixed(2)} € Trinkgeld gegeben. Die Bedienung hat gelächelt.`]}:foodTrouble(s.day,s.minute)?{
  cs:[...s.journal.cs,'Večeře dnes chutnala nezvykle slaně. Z kuchyně se ozval povzdech.'],
  de:[...s.journal.de,'Das Abendessen schmeckte heute ungewöhnlich salzig. Aus der Küche kam ein Seufzer.']
  }:s.journal};

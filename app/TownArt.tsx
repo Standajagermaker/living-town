@@ -24,15 +24,15 @@ export const landmarks:{place:Place;x:number;y:number}[]=[
  {place:'pool',x:19,y:33},{place:'resort',x:86,y:13},{place:'bank',x:69,y:72},{place:'theatre',x:37,y:28},{place:'petshop',x:79,y:77},{place:'train',x:11,y:19},{place:'hospital',x:94,y:43},{place:'school',x:91,y:53}
 ];
 export function StreetView({place,lang,season,hour=12,homeFocus='room'}:{place:Place;lang:Lang;season:number;hour?:number;homeFocus?:'room'|'tv'|'phone'}){
- const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work',theatre:'theatre'};
+ const named:Partial<Record<Place,string>>={home:'home',street:'street',square:'square',library:'library',bakery:'bakery',market:'mall',outfitter:'outfitter',cafe:'cafe',bank:'bank',work:'work',theatre:'theatre',restaurant:'cafe',hotel:'home',gym:'outfitter',church:'square',park:'street',mountains:'square',pool:'square',resort:'square',petshop:'mall',train:'street',hospital:'work',school:'library'};
  const asset=named[place]??null;
- const [format,setFormat]=useState<'webp'|'svg'>('webp');
- useEffect(()=>setFormat('webp'),[place]);
+ const [format,setFormat]=useState<'webp'|'svg'>('svg');
+ useEffect(()=>setFormat('svg'),[place]);
  if(place==='home'&&homeFocus!=='room')return <div className={'home-focused-scene '+(homeFocus==='tv'?'focus-tv':'focus-phone')}>
   {homeFocus==='tv'?<div className="living-television"><div className="tv-image"><div className="tv-mountain">⛰️</div><div className="tv-caption">{lang==='cs'?'ZPRÁVY Z MĚSTA':'STADTNACHRICHTEN'}</div><div className="tv-headline">{lang==='cs'?'Dnes ve městě':'Heute in der Stadt'}</div></div><div className="tv-stand"/></div>:<div className="living-phone"><div className="phone-top">{String(hour).padStart(2,'0')}:00 · ●●●</div><div className="phone-content"><div>☁️ {lang==='cs'?'Počasí a zprávy':'Wetter & Nachrichten'}</div><div>💬 {lang==='cs'?'Kontakty':'Kontakte'}</div><div>📆 {lang==='cs'?'Můj kalendář':'Mein Kalender'}</div><div>📍 Living Town</div></div><div className="phone-bottom"/></div>}
   <div className="perspective-label">{homeFocus==='tv'?'📺':'📱'} {lang==='cs'?(homeFocus==='tv'?'Televize':'Telefon'):(homeFocus==='tv'?'Fernseher':'Handy')}</div></div>;
  if(asset)return <div className={'player-photo-scene season-'+season+' '+(hour>=20||hour<6?'is-night':'')} role="img" aria-label={placeNames[place][lang]}>
-   <img src={`/scenes/${asset}.${format}`} alt={placeNames[place][lang]} onError={()=>{if(format==='webp')setFormat('svg')}}/>
+   <img src={`/scenes/${asset}.${format}`} alt={placeNames[place][lang]} loading="eager" onError={()=>{if(format==='webp')setFormat('svg')}}/>
    <div className="perspective-label">{glyph[place]} {placeNames[place][lang]}</div>
  </div>;
  const indoor=(['home','bakery','library','market','restaurant','cafe','hotel','work','gym','outfitter'] as Place[]).includes(place);

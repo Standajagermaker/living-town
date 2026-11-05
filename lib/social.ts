@@ -129,7 +129,7 @@ export function holiday(s:TownState):TownState{
 }
 export function restaurantQuote(s:TownState,guestId?:string):number{
  // One menu price per day and game visit; cents are deterministic so the quoted price never changes while deciding.
- const baseCents=2000+((s.day*137+s.minute*7+s.social.tripCount*59+173)%1947);
+ const baseCents=2000+((s.day*137+s.social.tripCount*59+173)%1947); // Stable while dining
  return Math.round(baseCents*(guestId?2:1))/100;
 }
 export function restaurantMeal(s:TownState,guestId?:string,tipPercent:number=0):TownState{
@@ -140,7 +140,7 @@ export function restaurantMeal(s:TownState,guestId?:string,tipPercent:number=0):
  const tip=Math.round(basePrice*Math.max(0,Math.min(20,tipPercent))/100*100)/100;
  const price=Math.round((basePrice+tip)*100)/100;
  if(s.wallet<price)return s;
- const n=addTime(s,45);
+ const n={...addTime(s,45),place:'street' as const,selectedNpc:null};
  const social=guest?{...n.social,bonds:{...n.social.bonds,[guest]:{...getBond(n,guest),warmth:Math.min(100,getBond(n,guest).warmth+4),trust:Math.min(100,getBond(n,guest).trust+2)}}}:n.social;
  return {...n,wallet:Math.round((s.wallet-price)*100)/100,walletHistory:[...s.walletHistory,Math.round((s.wallet-price)*100)/100],
  life:{...n.life,lastMeal:n.day*1440+n.minute,hunger:Math.max(0,n.life.hunger-60),energy:Math.min(100,n.life.energy+9)},social,
@@ -174,4 +174,27 @@ export function sport(s:TownState,kind:'run'|'bike'|'swim'|'ski'|'downhill'):Tow
  return {...n,life:{...n.life,energy:Math.max(0,n.life.energy-12),hunger:Math.min(100,n.life.hunger+13)},
  journal:{cs:[...s.journal.cs,kind==='run'?'Běhání v parku: chtěl jsi předběhnout pana s jezevčíkem. Jezevčík tě nechal vyhrát až na cílové rovince.':kind==='bike'?'Projížďka na kole: cizí pes tě předběhl s výrazem profesionálního závodníka.':kind==='swim'?'Koupání v létě: jeden plavec si zapomněl, že má na sobě sluneční brýle.':kind==='ski'?'Lyžování: stopa vedla přímo ke stánku s čajem. Podezřele praktické.':'Downhill: na sjezdovce tě předjel důchodce s klidným výrazem a zvonkem na řídítkách.'],
  de:[...s.journal.de,kind==='run'?'Joggen im Park: Du wolltest einen Mann mit Dackel überholen. Der Dackel ließ dich erst kurz vor dem Ziel gewinnen.':kind==='bike'?'Radtour: Ein fremder Hund überholt dich mit der Miene eines Profis.':kind==='swim'?'Sommerschwimmen: Ein Schwimmer vergisst, dass er noch seine Sonnenbrille trägt.':kind==='ski'?'Skifahren: Die Spur endet direkt am Teestand. Verdächtig praktisch.':'Downhill: Ein Rentner überholt dich seelenruhig mit Klingel am Lenker.']}};
+}
+
+// Fitness membership: 30 game days, scheduled around the working week.
+export type GymPlan='one'|'two'|'three';
+export const gymPrices:Record<GymPlan,number>={one:19,two:32,three:44};
+export const gymFrequency:Record<GymPlan,number>={one:1,two:2,three:3};
+export function gymJoin(s:TownState,plan:GymPlan):TownState{
+ if(s.place!=='gym'||(s.gymMembership&&s.gymMembership.paidThrough>s.day)||s.wallet<gymPrices[plan])return s;
+ const n=addTime(s,30),balance=Math.round((s.wallet-gymPrices[plan])*100)/100;
+ return {...n,wallet:balance,walletHistory:[...s.walletHistory,balance],gymMembership:{plan,paidThrough:n.day+30,visits:[],lastVisitDay:-1},journal:{cs:[...s.journal.cs,'Přihlásil ses do fitness na 30 dní.'],de:[...s.journal.de,'Du hast eine 30-tägige Fitness-Mitgliedschaft abgeschlossen.']}};
+}
+export function gymCanTrain(s:TownState):boolean{
+ const m=s.gymMembership;if(s.place!=='gym'||!m||s.day>=m.paidThrough||m.lastVisitDay===s.day||s.life.energy<20)return false;
+ const weekday=s.day%7>=2; // 0 Saturday, 1 Sunday
+ if(weekday&&s.minute<17*60)return false;
+ if(s.minute<8*60||s.minute>20*60)return false;
+ const visits=m.visits.filter(d=>d>=s.day-6&&d<=s.day);
+ return visits.length<gymFrequency[m.plan];
+}
+export function gymTrain(s:TownState):TownState{
+ if(!gymCanTrain(s))return s;
+ const n=addTime(s,120),m=s.gymMembership!;
+ return {...n,gymMembership:{...m,visits:[...m.visits,s.day],lastVisitDay:s.day},life:{...n.life,energy:Math.max(0,n.life.energy-19),hunger:Math.min(100,n.life.hunger+17)},mindset:n.mindset+2,journal:{cs:[...s.journal.cs,'Dvě hodiny ve fitness: po práci nebo o víkendu.'],de:[...s.journal.de,'Zwei Stunden Training nach der Arbeit oder am Wochenende.']}};
 }

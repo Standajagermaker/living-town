@@ -10,6 +10,7 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  ['misunderstand-explain','Promiň, byl to jen pokus o vtip.','Entschuldige, das war nur ein Scherz.'],
  ['misunderstand-clarify','Myslel jsem to jinak. Zkusím to vysvětlit jednodušeji.','Ich meinte es anders. Ich versuche es einfacher zu erklären.'],
  ['misunderstand-accept','Asi máme jiný smysl pro humor, a to je v pořádku.','Wir haben wohl einen anderen Humor, das ist völlig okay.']]);
+ if(/chcete celý bochník|wollen sie einen ganzen laib|möchten sie den ganzen laib/.test(line))return options([['bread-whole','Ano, vezmu celý bochník.','Ja, ich nehme den ganzen Laib.'],['bread-half','Můžu dostat polovinu?','Kann ich einen halben Laib bekommen?'],['bread-price','Kolik stojí?','Was kostet er?']]);
  if(/co to bude|co jste si vybral|was darf.s sein|was hätten sie gern|was darf ich ihnen geben/.test(line))return options([
  ['bakery-pretzel','Jeden preclík, prosím.','Eine Brezel, bitte.'],
  ['bakery-bread','Máte čerstvý chléb?','Haben Sie frisches Brot?'],
@@ -95,6 +96,9 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
 export function contextualResponse(id:string):Phrase|null{
  const prefix=id.replace(/-\d+$/,'');
  const lines:Record<string,Phrase>={
+ 'bread-whole':{cs:'Dobře, celý bochník. Chcete ho nakrájet?',de:'Gerne, ein ganzer Laib. Soll ich ihn schneiden?'},
+ 'bread-half':{cs:'Samozřejmě, polovinu vám odkrojím. Ještě něco?',de:'Natürlich, ich schneide Ihnen eine Hälfte ab. Sonst noch etwas?'},
+ 'bread-price':{cs:'Podívám se na dnešní cenu na štítku. Chcete ještě něco?',de:'Ich schaue kurz auf das Preisschild. Möchten Sie sonst noch etwas?'},
  'misunderstand-explain':{cs:'Aha, už chápu. Promiň, humor mi dnes nějak nedochází.',de:'Ach so, verstehe. Entschuldige, heute bin ich wohl nicht in Witzlaune.'},
  'misunderstand-clarify':{cs:'Teď je to jasnější. Dík, že jsi to upřesnil.',de:'Jetzt verstehe ich es besser. Danke für die Erklärung.'},
  'misunderstand-accept':{cs:'To je fér. Aspoň se nemusíme smát všemu stejně.',de:'Das ist fair. Wir müssen nicht über dieselben Dinge lachen.'},

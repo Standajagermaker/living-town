@@ -11,6 +11,7 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  ['misunderstand-clarify','Myslel jsem to jinak. Zkusím to vysvětlit jednodušeji.','Ich meinte es anders. Ich versuche es einfacher zu erklären.'],
  ['misunderstand-accept','Asi máme jiný smysl pro humor, a to je v pořádku.','Wir haben wohl einen anderen Humor, das ist völlig okay.']]);
  if(/chcete celý bochník|wollen sie einen ganzen laib|möchten sie den ganzen laib/.test(line))return options([['bread-whole','Ano, vezmu celý bochník.','Ja, ich nehme den ganzen Laib.'],['bread-half','Můžu dostat polovinu?','Kann ich einen halben Laib bekommen?'],['bread-price','Kolik stojí?','Was kostet er?']]);
+ if(/počasí|wetter|prší|regnet|slunce|sonnig/.test(line))return options([['weather-feel','Mně dnešní počasí docela vyhovuje.','Ich finde das Wetter heute angenehm.'],['weather-dislike','Raději bych měl trochu jiné počasí.','Ich hätte lieber anderes Wetter.'],['weather-plans','Máš kvůli počasí nějaké plány?','Hast du wegen des Wetters etwas vor?']]);
  if(/co to bude|co jste si vybral|was darf.s sein|was hätten sie gern|was darf ich ihnen geben/.test(line))return options([
  ['bakery-pretzel','Jeden preclík, prosím.','Eine Brezel, bitte.'],
  ['bakery-bread','Máte čerstvý chléb?','Haben Sie frisches Brot?'],
@@ -88,14 +89,14 @@ export function contextualOptions(last:Phrase|undefined,lang:Lang,turn:number):A
  ['self-explore','Já teď hlavně poznávám nové prostředí.','Ich lerne gerade meine neue Umgebung kennen.'],
  ['self-relax','Dnes bych rád trochu odpočíval.','Heute möchte ich mich etwas entspannen.'],
  ['self-people','Doufám, že tu poznám zajímavé lidi.','Ich hoffe, interessante Menschen kennenzulernen.']]);
- return options([
- ['generic-yes','To mě zajímá. Pověz mi o tom víc.','Das interessiert mich. Erzähl mir mehr.'],
- ['generic-unsure','Ještě o tom přemýšlím.','Darüber denke ich noch nach.'],
- ['generic-share','S tím už jsem se taky setkal.','Das habe ich auch schon erlebt.']]);
+ return null; // An unmatched question must not receive generic nonsensical answers.
 }
 export function contextualResponse(id:string):Phrase|null{
  const prefix=id.replace(/-\d+$/,'');
  const lines:Record<string,Phrase>={
+ 'weather-feel':{cs:'To jsem rád. Já podle počasí často měním, kam po práci vyrazím.',de:'Schön. Je nach Wetter ändere ich manchmal meine Pläne nach der Arbeit.'},
+ 'weather-dislike':{cs:'Rozumím. Když prší, radši zajdu do knihovny nebo kavárny.',de:'Verstehe ich. Bei Regen gehe ich lieber in die Bibliothek oder ins Café.'},
+ 'weather-plans':{cs:'Možná půjdu na procházku, jestli se vyčasí.',de:'Vielleicht gehe ich spazieren, wenn es aufklart.'},
  'bread-whole':{cs:'Dobře, celý bochník. Chcete ho nakrájet?',de:'Gerne, ein ganzer Laib. Soll ich ihn schneiden?'},
  'bread-half':{cs:'Samozřejmě, polovinu vám odkrojím. Ještě něco?',de:'Natürlich, ich schneide Ihnen eine Hälfte ab. Sonst noch etwas?'},
  'bread-price':{cs:'Podívám se na dnešní cenu na štítku. Chcete ještě něco?',de:'Ich schaue kurz auf das Preisschild. Möchten Sie sonst noch etwas?'},

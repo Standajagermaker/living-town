@@ -2,10 +2,11 @@
 export const restaurantCast={waitress:'npc-47',chef:'npc-48',owner:'npc-50'} as const;
 export type RestaurantStory={
  chefCalled:boolean;ownerCalled:boolean;mealComplaint:boolean;mealDay:number;
+ waiterSatisfaction?:number;
  lastDrinkDay:number;conversationsAtTable:number;gossipHeard:boolean;secretHeard:boolean;
 };
 export const initialRestaurantStory=():RestaurantStory=>({
- chefCalled:false,ownerCalled:false,mealComplaint:false,mealDay:-1,
+ chefCalled:false,ownerCalled:false,mealComplaint:false,mealDay:-1,waiterSatisfaction:0,
  lastDrinkDay:-1,conversationsAtTable:0,gossipHeard:false,secretHeard:false
 });
 export function restaurantOpen(minute:number){return minute>=11*60&&minute<22*60;}

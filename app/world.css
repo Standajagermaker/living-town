@@ -9,3 +9,25 @@
 
 /* v0.8.8 fitness membership and checkout contrast */
 .gym-membership select{padding:9px;background:#f7ead7;color:#172626;border:1px solid #9b7d50;border-radius:8px}.gym-membership button{margin-top:9px}.gym-membership label{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.gym-membership small{display:block;margin-top:7px;color:#333f39}.social-activities .life-object{color:#242a27}.social-activities .life-object p,.social-activities .life-object small{color:#333c36}
+
+/* v0.8.9: clear contrast and fast-paced office story */
+.office089{background:#24332f!important;color:#fff5e3!important;border:1px solid #bca16b!important;padding:16px!important;border-radius:14px!important;box-shadow:0 8px 24px #0003}
+.office089 h3,.office089 h4,.office089 strong{color:#fff5d8!important}
+.office089 p,.office089 small,.office089 .office089-top{color:#f2e9d8!important}
+.office089-top{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.office089-top h4{font-size:18px!important;margin:2px 0 10px!important}
+.office089-progress{width:100%;height:8px;background:#111d1a;border-radius:20px;overflow:hidden;margin:10px 0}
+.office089-progress div{height:100%;background:linear-gradient(90deg,#e3ba6d,#9fe0b7);transition:width .3s ease}
+.office089-scene{background:#f0e3cb;color:#22312b;border-radius:13px;padding:14px;margin:12px 0;border:1px solid #d8bd8d}
+.office089-scene h3{color:#28362d!important;font:700 19px system-ui,sans-serif!important;margin:0 0 8px!important}
+.office089-scene p{color:#2c3730!important;font:15px/1.55 system-ui,sans-serif!important}
+.office089-actions{display:grid;gap:8px;margin-top:14px}
+.office089-actions button{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:13px 14px;background:#fff7e9;color:#1c2a27!important;font:600 14px/1.35 system-ui,sans-serif;text-align:left;border:1px solid #b4a280;border-radius:9px;cursor:pointer}
+.office089-actions button:hover:not(:disabled){background:#dfedda;border-color:#56866b}
+.office089-actions button:focus-visible{outline:3px solid #4d947b;outline-offset:2px}
+.office089-actions button:disabled{opacity:.48;cursor:not-allowed}
+.office089-feedback{background:#142722!important;color:#ffe3a8!important;border-left:4px solid #e5bd79;border-radius:8px;padding:12px;font:14px/1.5 system-ui,sans-serif}
+.commute089{background:#eae0cd;color:#20312a;border-radius:12px;border:1px solid #bda171;padding:12px;margin:10px 0}
+.commute089 p{color:#26372d!important;font:14px/1.5 system-ui,sans-serif}
+.commute089 button{background:#244739!important;color:#fff3db!important}
+@media(max-width:600px){.office089{padding:12px!important}.office089-scene{padding:12px}.office089-actions button{padding:12px;font-size:13px}}

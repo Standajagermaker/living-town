@@ -34,6 +34,7 @@ export const placeNames:Record<Place,Record<Lang,string>>={
 export const links:Record<Place,Place[]>={home:['street'],street:['home','bakery','square','work','library','market','cafe','park','church','hotel','gym','mountains','restaurant','outfitter','pool','resort','bank','theatre','petshop','train','hospital','school'],bakery:['street'],square:['street','library','cafe','park','church','market','hotel','gym','restaurant','outfitter'],work:['street'],library:['street','square'],market:['street','square'],cafe:['street','square'],park:['street','square','mountains'],church:['street','square'],hotel:['street','square'],gym:['street','square'],mountains:['street','park'],restaurant:['street','square'],outfitter:['street','square'],pool:['street','park'],resort:['street','mountains'],bank:['street','square'],theatre:['street','square'],petshop:['street','square'],train:['street','square'],hospital:['street','square'],school:['street','square']};
 export type TownState={
  v083?:import('./living083').V083;
+ office089?:{day:number;step:number;last:{cs:string;de:string}};
  gymMembership?:{plan:'one'|'two'|'three';paidThrough:number;visits:number[];lastVisitDay:number};
  version:number;playerName?:string;playerGender?:'female'|'male'|'other';place:Place;day:number;minute:number;wallet:number;mindset:number;employment:'employed'|'warned'|'fired';absences:number;lastShift:number;life:LifeState;social:SocialState;
  discovered:Place[];recommended:Place[];known:string[];selectedNpc:string|null;
